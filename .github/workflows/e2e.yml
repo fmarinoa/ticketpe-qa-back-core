@@ -12,9 +12,12 @@ on:
       tags:
         description: 'Filtro de tags Karate (ej. @smoke o ~@negocio)'
         default: ''
+      environment:
+        description: 'Ambiente definido en karate-config.js (testathon, local)'
+        default: 'testathon'
       baseUrl:
-        description: 'URL base de la API'
-        default: 'https://testathon.testingperu.com/api/core'
+        description: 'URL base explícita (opcional, pisa al ambiente)'
+        default: ''
 
 permissions:
   contents: read
@@ -52,7 +55,9 @@ jobs:
         run: |
           OPTS=""
           [ -n "${{ steps.alcance.outputs.tags }}" ] && OPTS="--tags ${{ steps.alcance.outputs.tags }}"
-          mvn -B test -DbaseUrl="${{ inputs.baseUrl || vars.BASE_URL}}" -Dkarate.options="$OPTS"
+          ARGS="-Denvironment=${{ inputs.environment || 'testathon' }}"
+          [ -n "${{ inputs.baseUrl }}" ] && ARGS="$ARGS -DbaseUrl=${{ inputs.baseUrl }}"
+          mvn -B test $ARGS "-Dkarate.options=$OPTS"
 
       - name: Resumen en el job
         if: always()

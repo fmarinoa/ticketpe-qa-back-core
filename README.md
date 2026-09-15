@@ -13,19 +13,49 @@ Pruebas E2E de backend para la API **TicketPe Núcleo**
 ## Ejecutar
 
 ```sh
-mvn test                                                          # toda la suite (5 hilos)
-mvn test -Dkarate.options="--tags @smoke"                         # solo el smoke
-mvn test -Dkarate.options="--tags @compra,@entradas"              # varios tags (OR)
-mvn test -Dkarate.options="--tags ~@negocio"                      # excluir un tag
-mvn test -Dkarate.options="classpath:ticketpe/compra.feature"     # un feature suelto
-mvn test -DbaseUrl=http://localhost:4100/api/core                 # otro ambiente
+mvn test                                                   # toda la suite (5 hilos), ambiente testathon
+mvn test -Denvironment=local                               # contra localhost:4100
+mvn test "-Dkarate.options=--tags @smoke"                  # solo el smoke
+mvn test "-Dkarate.options=--tags @compra,@entradas"       # varios tags (OR)
+mvn test "-Dkarate.options=--tags ~@negocio"               # excluir un tag
+mvn test "-Dkarate.options=classpath:ticketpe/compra.feature"
+mvn test -DbaseUrl=http://otra-url/api/core                # URL explícita, pisa al ambiente
 ```
+
+## Ambientes
+
+Las URL base están versionadas en `src/test/java/karate-config.js`:
+
+| Ambiente | URL |
+|---|---|
+| `testathon` (default) | `https://testathon.testingperu.com/api/core` |
+| `local` | `http://localhost:4100/api/core` |
+
+Se elige con `-Denvironment=<nombre>` (también sirve `-Dkarate.env=` o la
+variable `KARATE_ENV`). Un ambiente inexistente falla de inmediato con
+`ambiente desconocido: x. Válidos: testathon,local` en vez de pegarle a la URL
+equivocada. `-DbaseUrl=` pisa cualquier ambiente y sirve para una URL de paso.
+
+Agregar un ambiente = una línea en el mapa `ambientes` del `karate-config.js`.
+
+## Runners en IntelliJ IDEA
+
+El repo versiona configuraciones compartidas en `.run/`; IntelliJ las carga solas
+al abrir el proyecto y aparecen en el selector de Run:
+
+| Runner | Qué corre |
+|---|---|
+| Suite completa (testathon) | `mvn test -Denvironment=testathon` |
+| Smoke (testathon) | `mvn test -Denvironment=testathon -Dkarate.options=--tags @smoke` |
+| Suite completa (local) | `mvn test -Denvironment=local` |
+
+Para uno nuevo: duplicar un `.run/*.run.xml`, cambiar `name` y los `<option value="-D...">`.
+Si lo creas desde la UI, marca **Store as project file** para que quede versionado.
 
 Reporte HTML: `target/karate-reports/karate-summary.html`
 
-`baseUrl` llega por `-DbaseUrl=...`: surefire lo pasa como system property y
-`karate-config.js` lo lee. Sin el flag, el perfil `default-baseUrl` del `pom.xml`
-apunta al ambiente de testathon.
+Surefire propaga las `-D` del comando `mvn` al JVM de los tests, y
+`karate-config.js` las lee con `karate.properties[...]`.
 
 ## Estructura
 
@@ -105,7 +135,7 @@ llevan tipos reales (números, `null`) y admiten matchers de Karate como
 | Pull request | `@smoke` |
 | Push a `main` | suite completa |
 | Cron 07:00 Lima | suite completa |
-| `workflow_dispatch` | tags y `baseUrl` a elección |
+| `workflow_dispatch` | tags, `environment` y `baseUrl` a elección |
 
 Cada corrida sube el reporte HTML como artifact y escribe un resumen por feature
 en el Job Summary. El build falla si falla un escenario.
