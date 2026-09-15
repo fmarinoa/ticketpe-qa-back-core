@@ -4,7 +4,7 @@
 
 function fn() {
   var env = karate.env;
-  var isCi = !!karate.properties['ci'];
+  var isCi = karate.properties['ci'] === 'true';
 
   var baseUrl = utils.loadConfig('baseUrl');
 
