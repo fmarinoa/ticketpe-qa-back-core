@@ -23,9 +23,11 @@ function fn() {
 
   return {
     env: env,
+    isCi: isCi,
     baseUrl: baseUrl,
     ticketpe: {
       cards: utils.loadConfig('cards'),
+      roles: utils.loadConfig('roles'),
       password: utils.randomPassword(),
       newEmail: function () {
         return 'qa.karate.' + java.util.UUID.randomUUID() + '@testingperu.com';

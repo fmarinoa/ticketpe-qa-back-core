@@ -1,0 +1,32 @@
+{
+  "prod": {
+    "organizer": {
+      "email": "organizador-testitans@ticketpe.demo",
+      "password": "organizador123"
+    },
+    "admin": {
+      "email": "admin@ticketpe.demo",
+      "password": "admin123"
+    }
+  },
+  "stag": {
+    "organizer": {
+      "email": "organizador-testitans@ticketpe.demo",
+      "password": "organizador123"
+    },
+    "admin": {
+      "email": "admin@ticketpe.demo",
+      "password": "admin123"
+    }
+  },
+  "local": {
+    "organizer": {
+      "email": "organizador-testitans@ticketpe.demo",
+      "password": "organizador123"
+    },
+    "admin": {
+      "email": "admin@ticketpe.demo",
+      "password": "admin123"
+    }
+  }
+}
