@@ -1,0 +1,1 @@
+# ticketpe-qa-back-core
