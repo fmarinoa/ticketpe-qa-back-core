@@ -26,6 +26,9 @@ jobs:
   e2e:
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    permissions:
+      contents: read
+      copilot-requests: write
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
@@ -50,7 +53,7 @@ jobs:
         run: |
           OPTS=""
           [ -n "${{ steps.alcance.outputs.tags }}" ] && OPTS="--tags ${{ steps.alcance.outputs.tags }}"
-          mvn -B clean test -Denvironment="${{ inputs.environment || 'prod' }}" "-Dkarate.options=$OPTS"
+          mvn -B clean test -Dci=true -Dkarate.env="${{ inputs.environment || 'prod' }}" "-Dkarate.options=$OPTS"
 
       - name: Resumen en el job
         if: always()
@@ -66,6 +69,14 @@ jobs:
             echo ""
             echo "Escenarios fallidos: **$(jq -r '.scenariosfailed' "$RESUMEN")**"
           } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Analizar fallo con IA
+        if: failure() && github.event.pull_request.head.repo.fork != true
+        run: |
+          npm install -g @github/copilot
+          scripts/analizar-fallo.sh
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
 
       - name: Publicar reporte HTML como artifact
         if: always()

@@ -13,7 +13,7 @@
             <list>
               <option value="clean" />
               <option value="test" />
-              <option value="-Denvironment=prod" />
+              <option value="-Dkarate.env=prod" />
               <option value="-Dkarate.options=--tags @smoke" />
             </list>
           </option>
