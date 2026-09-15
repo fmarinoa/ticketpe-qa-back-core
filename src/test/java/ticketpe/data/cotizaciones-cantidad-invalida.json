@@ -1,0 +1,4 @@
+[
+  { "caso": "cero",     "cantidad": 0 },
+  { "caso": "negativa", "cantidad": -3 }
+]

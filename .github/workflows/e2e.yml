@@ -1,0 +1,108 @@
+name: E2E API TicketPe
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  schedule:
+    # 07:00 Lima (12:00 UTC), regresión diaria
+    - cron: '0 12 * * *'
+  workflow_dispatch:
+    inputs:
+      tags:
+        description: 'Filtro de tags Karate (ej. @smoke o ~@negocio)'
+        default: ''
+      baseUrl:
+        description: 'URL base de la API'
+        default: 'https://testathon.testingperu.com/api/core'
+
+permissions:
+  contents: read
+
+# Un solo deploy de Pages a la vez; no cancela la corrida de tests en curso.
+concurrency:
+  group: pages-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  e2e:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: maven
+
+      - name: Definir alcance
+        id: alcance
+        run: |
+          if [ -n "${{ inputs.tags }}" ]; then
+            echo "tags=${{ inputs.tags }}" >> "$GITHUB_OUTPUT"
+          elif [ "${{ github.event_name }}" = "pull_request" ]; then
+            echo "tags=@smoke" >> "$GITHUB_OUTPUT"
+          else
+            echo "tags=" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Ejecutar suite
+        run: |
+          OPTS=""
+          [ -n "${{ steps.alcance.outputs.tags }}" ] && OPTS="--tags ${{ steps.alcance.outputs.tags }}"
+          mvn -B test -DbaseUrl="${{ inputs.baseUrl || vars.BASE_URL}}" -Dkarate.options="$OPTS"
+
+      - name: Resumen en el job
+        if: always()
+        run: |
+          RESUMEN=target/karate-reports/karate-summary-json.txt
+          [ -f "$RESUMEN" ] || exit 0
+          {
+            echo "## Resultado Karate"
+            echo ""
+            echo "| Feature | Escenarios | Fallidos |"
+            echo "|---|---|---|"
+            jq -r '.featureSummary[] | "| \(.relativePath) | \(.scenarioCount) | \(.failedCount) |"' "$RESUMEN"
+            echo ""
+            echo "Escenarios fallidos: **$(jq -r '.scenariosfailed' "$RESUMEN")**"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Publicar reporte HTML como artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: karate-report-${{ github.run_number }}
+          path: target/karate-reports
+          retention-days: 14
+
+      # Pages necesita un index.html; Karate genera karate-summary.html.
+      - name: Preparar reporte para Pages
+        if: always() && github.event_name != 'pull_request'
+        run: |
+          [ -d target/karate-reports ] || exit 0
+          cp target/karate-reports/karate-summary.html target/karate-reports/index.html
+
+      - name: Empaquetar para Pages
+        if: always() && github.event_name != 'pull_request'
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: target/karate-reports
+
+  # El reporte de la última corrida queda en la URL de Pages del repo.
+  # Requiere: Settings > Pages > Source = GitHub Actions.
+  pages:
+    needs: e2e
+    if: always() && github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - name: Desplegar a GitHub Pages
+        id: deploy
+        uses: actions/deploy-pages@v4

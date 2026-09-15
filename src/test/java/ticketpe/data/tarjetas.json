@@ -1,0 +1,18 @@
+[
+  {
+    "caso": "aprobada",
+    "tarjeta": "4242424242424242",
+    "status": 201,
+    "estadoPago": "aprobado",
+    "errorEsperado": null,
+    "estadoReserva": "#string"
+  },
+  {
+    "caso": "rechazada",
+    "tarjeta": "4000000000000002",
+    "status": 402,
+    "estadoPago": null,
+    "errorEsperado": "pago_rechazado",
+    "estadoReserva": "pendiente"
+  }
+]
