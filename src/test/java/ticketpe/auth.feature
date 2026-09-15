@@ -51,6 +51,14 @@ Scenario: login con credenciales válidas devuelve token
   And match response.token == '#string'
   And match response.usuario.correo == alta.correo
 
+@only
+Scenario Outline: login como <role>
+  * def login = call read('helpers/login.feature') { role: '<role>' }
+  Then match login.response == <expected>
+
+  Examples:
+    | read('data/login-roles.json') |
+
 Scenario: login con contraseña incorrecta
   * def alta = call read('helpers/usuario.feature')
   Given path 'auth', 'login'
