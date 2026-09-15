@@ -15,18 +15,18 @@ Pruebas E2E de backend para la API **TicketPe Núcleo**
 ## Ejecutar
 
 ```sh
-mvn test -Denvironment=prod                                # toda la suite (5 hilos)
-mvn test -Denvironment=stag                                # contra staging
-mvn test -Denvironment=local                               # contra localhost:4100
-mvn test -Denvironment=prod "-Dkarate.options=--tags @smoke"             # solo el smoke
-mvn test -Denvironment=prod "-Dkarate.options=--tags @compra,@entradas"  # varios tags (OR)
-mvn test -Denvironment=prod "-Dkarate.options=--tags ~@negocio"          # excluir un tag
-mvn test -Denvironment=prod "-Dkarate.options=classpath:ticketpe/compra.feature"
+mvn test -Dkarate.env=prod                                # toda la suite (5 hilos)
+mvn test -Dkarate.env=stag                                # contra staging
+mvn test -Dkarate.env=local                               # contra localhost:4100
+mvn test -Dkarate.env=prod "-Dkarate.options=--tags @smoke"             # solo el smoke
+mvn test -Dkarate.env=prod "-Dkarate.options=--tags @compra,@entradas"  # varios tags (OR)
+mvn test -Dkarate.env=prod "-Dkarate.options=--tags ~@negocio"          # excluir un tag
+mvn test -Dkarate.env=prod "-Dkarate.options=classpath:ticketpe/compra.feature"
 ```
 
 ## Ambientes
 
-Las URL base están versionadas en `src/test/java/karate-config.js`:
+Las URL base están versionadas en `src/test/java/config/baseUrl.json`:
 
 | Ambiente | URL |
 |---|---|
@@ -34,20 +34,21 @@ Las URL base están versionadas en `src/test/java/karate-config.js`:
 | `stag` | `https://testathon.stag.testingperu.com/api/core` |
 | `local` | `http://localhost:4100/api/core` |
 
-Se elige con `-Denvironment=<nombre>` (también sirve `-Dkarate.env=` o la
+Se elige con `-Dkarate.env=<nombre>` (también sirve `-Dkarate.env=` o la
 variable `KARATE_ENV`). **El flag es obligatorio**: sin ambiente, o con uno que
 no existe, la corrida falla de inmediato con
-`ambiente desconocido: x. Válidos: prod,stag,local`. No hay forma de pasar una
-URL suelta por línea de comandos: toda URL contra la que se corre está
+`ambiente desconocido: x (usar -Dkarate.env=prod|stag|local)`. No hay forma de
+pasar una URL suelta por línea de comandos: toda URL contra la que se corre está
 versionada en el repo y revisada en un PR.
 
-Las tarjetas de prueba también van por ambiente (`testCards`). Hoy son las mismas
-en los tres; están separadas para que un ambiente pueda cambiar su pasarela sin
-tocar los features. Los escenarios las leen como `cards.approved` /
-`cards.declined`, nunca por número literal.
+Las tarjetas de prueba también van por ambiente, en
+`src/test/java/config/cards.json`. Hoy son las mismas en los tres; están
+separadas para que un ambiente pueda cambiar su pasarela sin tocar los features.
+Los escenarios las leen como `ticketpe.cards.approved` /
+`ticketpe.cards.declined`, nunca por número literal.
 
-Agregar un ambiente = una línea en `environments` y otra en `testCards` del
-`karate-config.js`.
+Agregar un ambiente = una clave en `config/baseUrl.json` y otra en
+`config/cards.json`.
 
 ## Runners en IntelliJ IDEA
 
@@ -56,10 +57,10 @@ al abrir el proyecto y aparecen en el selector de Run:
 
 | Runner | Qué corre |
 |---|---|
-| Suite completa (prod) | `mvn test -Denvironment=prod` |
-| Smoke (prod) | `mvn test -Denvironment=prod -Dkarate.options=--tags @smoke` |
-| Suite completa (stag) | `mvn test -Denvironment=stag` |
-| Suite completa (local) | `mvn test -Denvironment=local` |
+| Suite completa (prod) | `mvn test -Dkarate.env=prod` |
+| Smoke (prod) | `mvn test -Dkarate.env=prod -Dkarate.options=--tags @smoke` |
+| Suite completa (stag) | `mvn test -Dkarate.env=stag` |
+| Suite completa (local) | `mvn test -Dkarate.env=local` |
 
 Para uno nuevo: duplicar un `.run/*.run.xml`, cambiar `name` y los `<option value="-D...">`.
 Si lo creas desde la UI, marca **Store as project file** para que quede versionado.
@@ -74,7 +75,11 @@ Surefire propaga las `-D` del comando `mvn` al JVM de los tests, y
 ```
 pom.xml
 src/test/java/
+  karate-base.js                      utilidades genéricas (utils.*, auth.*)
   karate-config.js                    ambientes, credenciales y tarjetas de prueba
+  config/
+    baseUrl.json                      URL base por ambiente
+    cards.json                        tarjetas de prueba por ambiente
   ticketpe/
     runners/RunnerTest.java           runner JUnit 5 (Runner.path("classpath:ticketpe").parallel(5))
     salud.feature                     health check
@@ -99,7 +104,11 @@ Los helpers están marcados `@ignore` (no corren solos) y evitan datos quemados:
 `evento-vendible.feature` elige en runtime un evento futuro, pagado y con cupo,
 porque el inventario del ambiente cambia.
 
-`karate-config.js` también fija `connectTimeout=10000` y `readTimeout=30000`.
+`karate-config.js` también fija `connectTimeout=10000`, `readTimeout=30000` y un
+`retry` global de 3 intentos cada 1 s.
+
+Cómo se reparten `karate-base.js` y `karate-config.js`, y qué restricciones de
+Karate obligan a ese corte: [`ARCHITECTURE.md`](ARCHITECTURE.md).
 
 ## Tags disponibles
 
@@ -125,7 +134,7 @@ que aísla solo el health check.
 1. `File > Open`, seleccionar el **`pom.xml`** de la raíz (no la carpeta) y elegir **Open as Project**. Así IntelliJ lo importa como proyecto Maven y resuelve las dependencias de Karate.
 2. `File > Project Structure > Project`: cualquier SDK Java 17+ sirve (p. ej. Java 26); el `pom.xml` compila a `release 17`.
 3. Plugins recomendados: **Cucumber for Java** y **Gherkin** (dan sintaxis, navegación y ejecución de escenarios sueltos desde el gutter).
-4. `src/test/java` es a la vez fuente de tests y test resource (los `.feature` y `karate-config.js` se copian al classpath vía la sección `<testResources>` del `pom.xml`).
+4. `src/test/java` es a la vez fuente de tests y test resource (los `.feature`, los `.json` y los `.js` se copian al classpath vía la sección `<testResources>` del `pom.xml`).
 
 ## Data-driven
 
@@ -165,10 +174,13 @@ Pages necesita ese nombre.
 > El repo todavía no es un repositorio git: falta `git init` y el remote de
 > GitHub para que el workflow corra.
 
-## Estrategia
+## Documentación
 
-Criterios de qué se automatiza, principios de diseño y convenciones:
-[`STRATEGY.md`](STRATEGY.md).
+| Documento | Qué responde |
+|---|---|
+| [`ARCHITECTURE.md`](ARCHITECTURE.md) | cómo está armada la suite y por qué |
+| [`STRATEGY.md`](STRATEGY.md) | qué se automatiza y con qué criterio |
+| [`AGENTS.md`](AGENTS.md) | reglas para agentes de codificación |
 
 ## Contrato descubierto (no está en el OpenAPI publicado)
 
@@ -184,16 +196,3 @@ Criterios de qué se automatiza, principios de diseño y convenciones:
 | `POST /entradas/{id}/transferir` | `{ correo_destino }` -> 200 |
 
 Tarjetas: `4242424242424242` aprueba, `4000000000000002` rechaza (402).
-
-## Hallazgos
-
-| Hallazgo | Evidencia |
-|---|---|
-| `POST /reservas/{id}/pago` emite **`cantidad + 1`** entradas y cobra solo por `cantidad`. Reproducido en los eventos 4, 12, 17 y 18 con cantidades 1, 2 y 3. | `compra.feature` escenario "flujo feliz de compra" |
-
-## Fuera de alcance por ahora
-
-- `POST /soporte`: no se pudo deducir el contrato (siempre `entrada_invalida`).
-- `POST /checkin` y `GET /reportes/ventas`: requieren un rol distinto de
-  `asistente` y el registro público solo crea asistentes. Solo se cubren
-  sus casos 401/403 en `autorizacion.feature`.

@@ -1,8 +1,9 @@
 # AGENTS.md
 
 Guía para agentes de codificación que trabajen en este repositorio. Agnóstica de
-proveedor. Complementa a `README.md` (uso humano) y `STRATEGY.md` (criterios de
-qué se automatiza y por qué); no los repite.
+proveedor. Complementa a `ARCHITECTURE.md` (decisiones estructurales),
+`README.md` (uso humano) y `STRATEGY.md` (criterios de qué se automatiza y por
+qué); no los repite.
 
 ## Qué es esto
 
@@ -12,21 +13,25 @@ No hay código de producción: todo el repo es test. `src/main` no existe.
 ## Comandos
 
 ```sh
-mvn test -Denvironment=prod                                              # suite completa (5 hilos)
-mvn test -Denvironment=stag                                              # otro ambiente
-mvn test -Denvironment=prod "-Dkarate.options=--tags @smoke"             # por tag
-mvn test -Denvironment=prod "-Dkarate.options=--tags @compra,@entradas"  # varios tags (OR)
-mvn test -Denvironment=prod "-Dkarate.options=--tags ~@negocio"          # excluir
-mvn test -Denvironment=prod "-Dkarate.options=classpath:ticketpe/compra.feature"        # un feature
-mvn test -Denvironment=prod "-Dkarate.options=classpath:ticketpe/compra.feature:12"     # un escenario (por línea)
+mvn test -Dkarate.env=prod                                              # suite completa (5 hilos)
+mvn test -Dkarate.env=stag                                              # otro ambiente
+mvn test -Dkarate.env=prod "-Dkarate.options=--tags @smoke"             # por tag
+mvn test -Dkarate.env=prod "-Dkarate.options=--tags @compra,@entradas"  # varios tags (OR)
+mvn test -Dkarate.env=prod "-Dkarate.options=--tags ~@negocio"          # excluir
+mvn test -Dkarate.env=prod "-Dkarate.options=classpath:ticketpe/compra.feature"        # un feature
+mvn test -Dkarate.env=prod "-Dkarate.options=classpath:ticketpe/compra.feature:12"     # un escenario (por línea)
+mvn test -Dkarate.env=prod -Dci=true                                    # modo CI (log compacto)
 ```
 
-- `-Denvironment=` es **obligatorio**. Sin él (o con valor inválido)
+- `-Dkarate.env=` es **obligatorio**. Sin él (o con valor inválido)
   `karate-config.js` corta la corrida con `ambiente desconocido: ...`.
 - **Para correr un escenario suelto se usa `-Dkarate.options`, no `-Dtest=`.**
   Existe un único test JUnit (`ticketpe/runners/RunnerTest.java`) que levanta
   toda la carpeta; filtrar por clase no sirve.
 - Reporte: `target/karate-reports/karate-summary.html`.
+- `-Dci=true` compacta el log de consola (`logPrettyRequest` /
+  `logPrettyResponse` en `false`); el reporte HTML no cambia. Lo pone el
+  workflow; localmente se omite.
 - `mvn` propaga las `-D` al JVM de Surefire y `karate-config.js` las lee con
   `karate.properties[...]`. Ese es el único canal de configuración.
 - IntelliJ: runners versionados en `.run/*.run.xml` (duplicar y cambiar `name` +
@@ -34,41 +39,14 @@ mvn test -Denvironment=prod "-Dkarate.options=classpath:ticketpe/compra.feature:
 
 ## Arquitectura
 
-```
-pom.xml                                  karate-junit5, release 17, surefire 3.5.2
-src/test/java/
-  karate-config.js                       ambientes, tarjetas, timeouts, password
-  ticketpe/
-    runners/RunnerTest.java              Runner.path("classpath:ticketpe").parallel(5)
-    *.feature                            un feature por dominio, un tag por feature
-    data/*.json                          casos de los escenarios @datos
-    helpers/*.feature                    fixtures @ignore invocados con call/callonce
-```
+En [`ARCHITECTURE.md`](ARCHITECTURE.md): las dos capas de configuración
+(`karate-base.js` genérica → `karate-config.js` del proyecto) y su orden de
+evaluación, los ambientes versionados en `config/*.json`, el classpath de
+`src/test/java`, el paralelismo de 5 hilos y las restricciones de Karate que
+rompen la corrida entera (claves de `karate.configure`, `logModifier`).
 
-Cuatro decisiones que hay que entender antes de tocar nada:
-
-1. **`src/test/java` es a la vez fuente y test resource.** El `<testResources>`
-   del `pom.xml` copia todo salvo `**/*Test.java` al classpath. Por eso los
-   `.feature`, los JSON y `karate-config.js` se resuelven como
-   `classpath:ticketpe/...`. Un `.feature` nuevo bajo `ticketpe/` entra a la
-   suite solo por existir: no hay que registrarlo en ningún lado.
-
-2. **Todo pasa por `karate-config.js`.** Ahí viven `baseUrl`, `cards`,
-   `password`, `env` y los timeouts (`connectTimeout` 10 s, `readTimeout` 30 s).
-   Agregar un ambiente = una línea en `environments` y otra en `testCards`. No
-   existe forma de pasar una URL suelta por CLI: toda URL contra la que se corre
-   está versionada y pasa por PR. Los features leen `cards.approved` /
-   `cards.declined`, nunca un número de tarjeta literal.
-
-3. **La suite corre en paralelo (5 hilos).** Ningún escenario puede depender del
-   orden ni del estado que dejó otro. Cada uno arma sus propios datos en el
-   `Background` con `call` / `callonce` a `helpers/`.
-
-4. **Cero datos quemados.** `helpers/usuario.feature` registra un asistente
-   nuevo por corrida (correo con UUID) y `helpers/evento-vendible.feature` elige
-   en runtime un evento futuro, pagado y con cupo consultando el catálogo y la
-   disponibilidad. El inventario del ambiente cambia; un `evento_id` fijo
-   convierte la suite en falso rojo.
+**Leerlo antes de tocar `karate-base.js`, `karate-config.js`, `config/*.json` o
+el `pom.xml`.**
 
 ## Convenciones al escribir tests
 
@@ -76,6 +54,11 @@ Cuatro decisiones que hay que entender antes de tocar nada:
   la carpeta entera; sin `@ignore` el helper corre suelto, sin sus parámetros, y
   falla. Se invoca con `call read('helpers/x.feature') { param: valor }` o
   `callonce` cuando basta una vez por feature.
+- **Un helper que crea una entidad devuelve todo lo necesario para usarla.**
+  `usuario.feature` devuelve `correo`, `password`, `token` y `usuario`: para
+  loguear a ese usuario se usa `alta.password`, nunca `ticketpe.password`. Si la
+  credencial fuera global, un `callonce` la desincronizaría
+  (ver [`ARCHITECTURE.md`](ARCHITECTURE.md#credenciales)).
 - **Un tag por dominio** (`@auth`, `@catalogo`, `@cotizacion`, `@compra`,
   `@entradas`, `@autorizacion`) a nivel Feature, más `@smoke` en el happy path de
   cada dominio, `@datos` en los data-driven y `@negocio` en los que congelan un
@@ -91,6 +74,9 @@ Cuatro decisiones que hay que entender antes de tocar nada:
   objeto más en el JSON, sin tocar Gherkin. Los JSON llevan tipos reales
   (números, `null`) y admiten matchers como `"#string"`.
 - **Nada de `sleep`.** Si hiciera falta esperar, `retry until` de Karate.
+- **Cero JS suelto en los asserts.** Antes de escribir un `function(){...}` en
+  un feature, aplicar el árbol de decisión de
+  [`ARCHITECTURE.md`](ARCHITECTURE.md#dónde-va-una-función-nueva).
 - **Un bug del API se documenta, no se esconde**: escenario con `@negocio` que
   fija el comportamiento actual, más una fila en la tabla de Hallazgos del
   README.
@@ -99,6 +85,7 @@ Cuatro decisiones que hay que entender antes de tocar nada:
 
 `.github/workflows/e2e.yml`: PR → `@smoke`; push a `main`, cron diario y
 `workflow_dispatch` → suite completa (el dispatch acepta `tags` y `environment`).
+Siempre corre con `-Dci=true`.
 Sube el reporte como artifact, escribe un resumen por feature en el Job Summary
 y, fuera de los PR, despliega el reporte a GitHub Pages (copia
 `karate-summary.html` a `index.html`). El build falla si falla un escenario
