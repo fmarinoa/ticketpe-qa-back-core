@@ -5,7 +5,6 @@ on:
   push:
     branches: [main]
   schedule:
-    # 07:00 Lima (12:00 UTC), regresión diaria
     - cron: '0 12 * * *'
   workflow_dispatch:
     inputs:
@@ -13,16 +12,12 @@ on:
         description: 'Filtro de tags Karate (ej. @smoke o ~@negocio)'
         default: ''
       environment:
-        description: 'Ambiente definido en karate-config.js (testathon, local)'
-        default: 'testathon'
-      baseUrl:
-        description: 'URL base explícita (opcional, pisa al ambiente)'
-        default: ''
+        description: 'Ambiente de pruebas (prod, stag, local)'
+        default: 'prod'
 
 permissions:
   contents: read
 
-# Un solo deploy de Pages a la vez; no cancela la corrida de tests en curso.
 concurrency:
   group: pages-${{ github.ref }}
   cancel-in-progress: false
@@ -55,9 +50,7 @@ jobs:
         run: |
           OPTS=""
           [ -n "${{ steps.alcance.outputs.tags }}" ] && OPTS="--tags ${{ steps.alcance.outputs.tags }}"
-          ARGS="-Denvironment=${{ inputs.environment || 'testathon' }}"
-          [ -n "${{ inputs.baseUrl }}" ] && ARGS="$ARGS -DbaseUrl=${{ inputs.baseUrl }}"
-          mvn -B test $ARGS "-Dkarate.options=$OPTS"
+          mvn -B clean test -Denvironment="${{ inputs.environment || 'prod' }}" "-Dkarate.options=$OPTS"
 
       - name: Resumen en el job
         if: always()
@@ -82,7 +75,6 @@ jobs:
           path: target/karate-reports
           retention-days: 14
 
-      # Pages necesita un index.html; Karate genera karate-summary.html.
       - name: Preparar reporte para Pages
         if: always() && github.event_name != 'pull_request'
         run: |
@@ -95,8 +87,6 @@ jobs:
         with:
           path: target/karate-reports
 
-  # El reporte de la última corrida queda en la URL de Pages del repo.
-  # Requiere: Settings > Pages > Source = GitHub Actions.
   pages:
     needs: e2e
     if: always() && github.event_name != 'pull_request'

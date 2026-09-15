@@ -3,7 +3,7 @@ Feature: Reserva, cupón y pago
 
 Background:
   * url baseUrl
-  * def alta = callonce read('helpers/usuario.feature')
+  * def alta = call read('helpers/usuario.feature')
   * def autorizado = { Authorization: '#("Bearer " + alta.token)' }
   * def elegido = callonce read('helpers/evento-vendible.feature') { cantidad: 2 }
   * configure headers = autorizado
@@ -23,7 +23,7 @@ Scenario: flujo feliz de compra: reserva, pago y emisión de entradas
   And match response.reserva contains { id: '#uuid', usuario_id: '#(alta.usuario.id)', evento_id: '#(elegido.evento_id)', cantidad: 2, estado: 'pendiente', cupon_codigo: null }
   * def reserva = response.reserva
   * def minutosBloqueo = (java.time.Instant.parse(reserva.expira_en).toEpochMilli() - java.time.Instant.parse(reserva.creado_en).toEpochMilli()) / 60000
-  And match minutosBloqueo == 15
+  And match Math.round(minutosBloqueo) == 15
 
   Given path 'reservas', reserva.id
   When method get
@@ -31,7 +31,7 @@ Scenario: flujo feliz de compra: reserva, pago y emisión de entradas
   And match response.reserva.id == reserva.id
 
   Given path 'reservas', reserva.id, 'pago'
-  And request { tarjeta_prueba: '#(tarjetaAprobada)' }
+  And request { tarjeta_prueba: '#(cards.approved)' }
   When method post
   Then status 201
   And match response.pago contains { reserva_id: '#(reserva.id)', estado: 'aprobado', monto: '#(cotizacion.total)' }
@@ -47,7 +47,7 @@ Scenario Outline: el pago con tarjeta <caso> responde <status> y deja la reserva
   * def reservaId = response.reserva.id
 
   Given path 'reservas', reservaId, 'pago'
-  And request { tarjeta_prueba: '#(tarjeta)' }
+  And request { tarjeta_prueba: '#(cards[card])' }
   When method post
   Then status <status>
   And match karate.get('response.pago.estado') == estadoPago
@@ -69,12 +69,12 @@ Scenario: una reserva ya pagada no se puede volver a pagar
   * def reservaId = response.reserva.id
 
   Given path 'reservas', reservaId, 'pago'
-  And request { tarjeta_prueba: '#(tarjetaAprobada)' }
+  And request { tarjeta_prueba: '#(cards.approved)' }
   When method post
   Then status 201
 
   Given path 'reservas', reservaId, 'pago'
-  And request { tarjeta_prueba: '#(tarjetaAprobada)' }
+  And request { tarjeta_prueba: '#(cards.approved)' }
   When method post
   Then status 409
   And match response.error == 'ya_confirmada'

@@ -1,5 +1,5 @@
 <component name="ProjectRunConfigurationManager">
-  <configuration default="false" name="Suite completa (testathon)" type="MavenRunConfiguration" factoryName="Maven">
+  <configuration default="false" name="Smoke (prod)" type="MavenRunConfiguration" factoryName="Maven">
     <MavenSettings>
       <option name="myGeneralSettings" />
       <option name="myRunnerSettings" />
@@ -11,8 +11,10 @@
           </option>
           <option name="goals">
             <list>
+              <option value="clean" />
               <option value="test" />
-              <option value="-Denvironment=testathon" />
+              <option value="-Denvironment=prod" />
+              <option value="-Dkarate.options=--tags @smoke" />
             </list>
           </option>
           <option name="pomFileName" />

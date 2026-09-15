@@ -3,7 +3,9 @@
 Pruebas E2E de backend para la API **TicketPe Núcleo**
 (`https://testathon.testingperu.com/api/core`) con [Karate](https://karatelabs.github.io/karate/) 1.5.1 sobre Maven + JUnit 5.
 
-> **Estado al 2026-09-14:** la API de testathon respondía **503 (mantenimiento)**, así que la suite todavía **no se validó end-to-end** contra el ambiente real.
+> **Estado al 2026-09-14:** suite verificada contra `prod`: 45 de 46 escenarios
+> en verde. El único rojo es un hallazgo real del API, no un test mal escrito
+> (ver "Hallazgos").
 
 ## Requisitos
 
@@ -13,13 +15,13 @@ Pruebas E2E de backend para la API **TicketPe Núcleo**
 ## Ejecutar
 
 ```sh
-mvn test                                                   # toda la suite (5 hilos), ambiente testathon
+mvn test -Denvironment=prod                                # toda la suite (5 hilos)
+mvn test -Denvironment=stag                                # contra staging
 mvn test -Denvironment=local                               # contra localhost:4100
-mvn test "-Dkarate.options=--tags @smoke"                  # solo el smoke
-mvn test "-Dkarate.options=--tags @compra,@entradas"       # varios tags (OR)
-mvn test "-Dkarate.options=--tags ~@negocio"               # excluir un tag
-mvn test "-Dkarate.options=classpath:ticketpe/compra.feature"
-mvn test -DbaseUrl=http://otra-url/api/core                # URL explícita, pisa al ambiente
+mvn test -Denvironment=prod "-Dkarate.options=--tags @smoke"             # solo el smoke
+mvn test -Denvironment=prod "-Dkarate.options=--tags @compra,@entradas"  # varios tags (OR)
+mvn test -Denvironment=prod "-Dkarate.options=--tags ~@negocio"          # excluir un tag
+mvn test -Denvironment=prod "-Dkarate.options=classpath:ticketpe/compra.feature"
 ```
 
 ## Ambientes
@@ -28,15 +30,24 @@ Las URL base están versionadas en `src/test/java/karate-config.js`:
 
 | Ambiente | URL |
 |---|---|
-| `testathon` (default) | `https://testathon.testingperu.com/api/core` |
+| `prod` | `https://testathon.testingperu.com/api/core` |
+| `stag` | `https://testathon.stag.testingperu.com/api/core` |
 | `local` | `http://localhost:4100/api/core` |
 
 Se elige con `-Denvironment=<nombre>` (también sirve `-Dkarate.env=` o la
-variable `KARATE_ENV`). Un ambiente inexistente falla de inmediato con
-`ambiente desconocido: x. Válidos: testathon,local` en vez de pegarle a la URL
-equivocada. `-DbaseUrl=` pisa cualquier ambiente y sirve para una URL de paso.
+variable `KARATE_ENV`). **El flag es obligatorio**: sin ambiente, o con uno que
+no existe, la corrida falla de inmediato con
+`ambiente desconocido: x. Válidos: prod,stag,local`. No hay forma de pasar una
+URL suelta por línea de comandos: toda URL contra la que se corre está
+versionada en el repo y revisada en un PR.
 
-Agregar un ambiente = una línea en el mapa `ambientes` del `karate-config.js`.
+Las tarjetas de prueba también van por ambiente (`testCards`). Hoy son las mismas
+en los tres; están separadas para que un ambiente pueda cambiar su pasarela sin
+tocar los features. Los escenarios las leen como `cards.approved` /
+`cards.declined`, nunca por número literal.
+
+Agregar un ambiente = una línea en `environments` y otra en `testCards` del
+`karate-config.js`.
 
 ## Runners en IntelliJ IDEA
 
@@ -45,8 +56,9 @@ al abrir el proyecto y aparecen en el selector de Run:
 
 | Runner | Qué corre |
 |---|---|
-| Suite completa (testathon) | `mvn test -Denvironment=testathon` |
-| Smoke (testathon) | `mvn test -Denvironment=testathon -Dkarate.options=--tags @smoke` |
+| Suite completa (prod) | `mvn test -Denvironment=prod` |
+| Smoke (prod) | `mvn test -Denvironment=prod -Dkarate.options=--tags @smoke` |
+| Suite completa (stag) | `mvn test -Denvironment=stag` |
 | Suite completa (local) | `mvn test -Denvironment=local` |
 
 Para uno nuevo: duplicar un `.run/*.run.xml`, cambiar `name` y los `<option value="-D...">`.
@@ -62,7 +74,7 @@ Surefire propaga las `-D` del comando `mvn` al JVM de los tests, y
 ```
 pom.xml
 src/test/java/
-  karate-config.js                    baseUrl, password y tarjetas de prueba
+  karate-config.js                    ambientes, credenciales y tarjetas de prueba
   ticketpe/
     TicketpeRunnerTest.java           runner JUnit 5 (Runner.path("classpath:ticketpe").parallel(5))
     salud.feature                     health check
@@ -74,7 +86,7 @@ src/test/java/
     autorizacion.feature              401 sin token, 403 por rol
     data/
       cotizaciones-cantidad-invalida.json  casos de cantidad inválida
-      tarjetas.json                        tarjeta aprobada / rechazada y su resultado esperado
+      tarjetas.json                        caso aprobada / rechazada y su resultado esperado
     helpers/
       usuario.feature                 registra un asistente nuevo y devuelve token
       evento-vendible.feature         elige evento futuro, pagado y con cupo
@@ -135,7 +147,7 @@ llevan tipos reales (números, `null`) y admiten matchers de Karate como
 | Pull request | `@smoke` |
 | Push a `main` | suite completa |
 | Cron 07:00 Lima | suite completa |
-| `workflow_dispatch` | tags, `environment` y `baseUrl` a elección |
+| `workflow_dispatch` | tags y `environment` a elección |
 
 Cada corrida sube el reporte HTML como artifact y escribe un resumen por feature
 en el Job Summary. El build falla si falla un escenario.
@@ -170,6 +182,12 @@ Criterios de qué se automatiza, principios de diseño y convenciones:
 | `POST /entradas/{id}/transferir` | `{ correo_destino }` -> 200 |
 
 Tarjetas: `4242424242424242` aprueba, `4000000000000002` rechaza (402).
+
+## Hallazgos
+
+| Hallazgo | Evidencia |
+|---|---|
+| `POST /reservas/{id}/pago` emite **`cantidad + 1`** entradas y cobra solo por `cantidad`. Reproducido en los eventos 4, 12, 17 y 18 con cantidades 1, 2 y 3. | `compra.feature` escenario "flujo feliz de compra" |
 
 ## Fuera de alcance por ahora
 

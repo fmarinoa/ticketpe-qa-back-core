@@ -3,7 +3,8 @@ Feature: Entradas, transferencia y reembolso
 
 Background:
   * url baseUrl
-  * def alta = callonce read('helpers/usuario.feature')
+  # usuario nuevo por escenario: el API limita a 4 entradas por evento y usuario
+  * def alta = call read('helpers/usuario.feature')
   * configure headers = { Authorization: '#("Bearer " + alta.token)' }
 
 @smoke

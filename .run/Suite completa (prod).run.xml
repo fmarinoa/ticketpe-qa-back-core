@@ -1,5 +1,5 @@
 <component name="ProjectRunConfigurationManager">
-  <configuration default="false" name="Suite completa (local)" type="MavenRunConfiguration" factoryName="Maven">
+  <configuration default="false" name="Suite completa (prod)" type="MavenRunConfiguration" factoryName="Maven">
     <MavenSettings>
       <option name="myGeneralSettings" />
       <option name="myRunnerSettings" />
@@ -13,7 +13,7 @@
             <list>
               <option value="clean" />
               <option value="test" />
-              <option value="-Denvironment=local" />
+              <option value="-Denvironment=prod" />
             </list>
           </option>
           <option name="pomFileName" />

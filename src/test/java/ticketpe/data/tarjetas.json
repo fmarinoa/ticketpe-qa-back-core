@@ -1,7 +1,7 @@
 [
   {
     "caso": "aprobada",
-    "tarjeta": "4242424242424242",
+    "card": "approved",
     "status": 201,
     "estadoPago": "aprobado",
     "errorEsperado": null,
@@ -9,7 +9,7 @@
   },
   {
     "caso": "rechazada",
-    "tarjeta": "4000000000000002",
+    "card": "declined",
     "status": 402,
     "estadoPago": null,
     "errorEsperado": "pago_rechazado",

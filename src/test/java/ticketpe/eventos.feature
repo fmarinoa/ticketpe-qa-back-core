@@ -59,5 +59,6 @@ Scenario: la disponibilidad nunca supera el cupo total del tipo de entrada
   And match each response.disponibilidad contains { tipo_entrada_id: '#number', nombre: '#string', precio: '#number', disponible: '#number', venta_abierta: '#boolean' }
   And match each response.disponibilidad == '#? _.disponible >= 0'
   * def porId = function(id){ return tipos.filter(function(t){ return t.id == id })[0] }
-  * def coherente = function(d){ var t = porId(d.tipo_entrada_id); return d.disponible == t.cupo_total - t.cupo_vendido }
+  # <= y no ==: las reservas pendientes de otros usuarios bloquean cupo sin haberlo vendido
+  * def coherente = function(d){ var t = porId(d.tipo_entrada_id); return d.disponible <= t.cupo_total - t.cupo_vendido }
   And match each response.disponibilidad == '#? coherente(_)'

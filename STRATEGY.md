@@ -58,7 +58,7 @@ no entrega). De esos dos solo se cubren 401/403.
 | Pull request | `@smoke` | feedback en menos de 1 min |
 | Push a `main` | suite completa | guardián de la rama |
 | Cron diario 07:00 Lima | suite completa | detecta degradación del ambiente, no solo del código |
-| `workflow_dispatch` | tags y `baseUrl` a elección | corridas ad hoc en el testathon |
+| `workflow_dispatch` | tags, ambiente y `baseUrl` a elección | corridas ad hoc en el testathon |
 
 Cada corrida publica el reporte HTML de Karate como artifact, un resumen por
 feature en el Job Summary y, fuera de los PR, despliega ese mismo reporte a

@@ -13,7 +13,7 @@ Scenario: elegir
     """
     function(eventos) {
       for (var i = 0; i < eventos.length; i++) {
-        var tipos = karate.call('disponibilidad.feature', { evento_id: eventos[i].id }).disponibilidad;
+        var tipos = karate.call('classpath:ticketpe/helpers/disponibilidad.feature', { evento_id: eventos[i].id }).disponibilidad;
         for (var j = 0; j < tipos.length; j++) {
           var t = tipos[j];
           if (t.venta_abierta && t.precio > 0 && t.disponible >= cantidad) {

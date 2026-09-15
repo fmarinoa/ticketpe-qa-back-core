@@ -1,22 +1,31 @@
 function fn() {
-  var ambientes = {
-    testathon: 'https://testathon.testingperu.com/api/core',
+  var environments = {
+    prod: 'https://testathon.testingperu.com/api/core',
+    stag: 'https://testathon.stag.testingperu.com/api/core',
     local: 'http://localhost:4100/api/core'
   };
-  // -Denvironment=local, -Dkarate.env=local o la variable de entorno KARATE_ENV
-  var env = karate.properties['environment'] || karate.env || 'testathon';
-  var baseUrl = karate.properties['baseUrl'] || ambientes[env];
+
+  var testCards = {
+    prod: { approved: '4242424242424242', declined: '4000000000000002' },
+    stag: { approved: '4242424242424242', declined: '4000000000000002' },
+    local: { approved: '4242424242424242', declined: '4000000000000002' }
+  };
+
+  // -Denvironment=local ó -Dkarate.env=local
+  var env = karate.properties['environment'] || karate.env;
+  var baseUrl = environments[env];
   if (!baseUrl) {
-    karate.fail('ambiente desconocido: ' + env + '. Válidos: ' + Object.keys(ambientes));
+    karate.fail('ambiente desconocido: ' + env + '. Válidos: ' + Object.keys(environments));
   }
-  karate.log('ambiente:', env, '| baseUrl:', baseUrl);
+
+  karate.log('ambiente:', env);
   karate.configure('connectTimeout', 10000);
   karate.configure('readTimeout', 30000);
+
   return {
-    env: env,
-    baseUrl: baseUrl,
+    env,
+    baseUrl,
     password: 'Qa123456',
-    tarjetaAprobada: '4242424242424242',
-    tarjetaRechazada: '4000000000000002'
+    cards: testCards[env]
   };
 }
