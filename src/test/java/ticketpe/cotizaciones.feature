@@ -13,10 +13,9 @@ Scenario: la cotización calcula subtotal, IGV (18%) y total
   Then status 200
   And match response contains { evento_id: '#(elegido.evento_id)', tipo: '#(elegido.tipo)', cantidad: 2, precio_unitario: '#(elegido.precio)', descuento: 0, cupon_aplicado: null }
   * def esperadoSubtotal = elegido.precio * 2
-  * def redondear = function(n){ return Math.round(n * 100) / 100 }
-  And match redondear(response.subtotal) == redondear(esperadoSubtotal)
-  And match redondear(response.igv) == redondear((response.subtotal - response.descuento) * 0.18)
-  And match redondear(response.total) == redondear(response.subtotal - response.descuento + response.igv)
+  And match utils.round(response.subtotal) == utils.round(esperadoSubtotal)
+  And match utils.round(response.igv) == utils.round((response.subtotal - response.descuento) * 0.18)
+  And match utils.round(response.total) == utils.round(response.subtotal - response.descuento + response.igv)
 
 Scenario Outline: la cotización valida la entrada: <caso>
   Given path 'cotizaciones'

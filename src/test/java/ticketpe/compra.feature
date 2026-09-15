@@ -4,7 +4,7 @@ Feature: Reserva, cupón y pago
 Background:
   * url baseUrl
   * def alta = call read('helpers/usuario.feature')
-  * def autorizado = { Authorization: '#("Bearer " + alta.token)' }
+  * def autorizado = auth.bearer(alta.token)
   * def elegido = callonce read('helpers/evento-vendible.feature') { cantidad: 2 }
   * configure headers = autorizado
 
@@ -22,8 +22,8 @@ Scenario: flujo feliz de compra: reserva, pago y emisión de entradas
   Then status 201
   And match response.reserva contains { id: '#uuid', usuario_id: '#(alta.usuario.id)', evento_id: '#(elegido.evento_id)', cantidad: 2, estado: 'pendiente', cupon_codigo: null }
   * def reserva = response.reserva
-  * def minutosBloqueo = (java.time.Instant.parse(reserva.expira_en).toEpochMilli() - java.time.Instant.parse(reserva.creado_en).toEpochMilli()) / 60000
-  And match Math.round(minutosBloqueo) == 15
+  * def minutosBloqueo = utils.minutesBetween(reserva.creado_en, reserva.expira_en)
+  And match utils.round(minutosBloqueo, 0) == 15
 
   Given path 'reservas', reserva.id
   When method get
@@ -31,7 +31,7 @@ Scenario: flujo feliz de compra: reserva, pago y emisión de entradas
   And match response.reserva.id == reserva.id
 
   Given path 'reservas', reserva.id, 'pago'
-  And request { tarjeta_prueba: '#(cards.approved)' }
+  And request { tarjeta_prueba: '#(ticketpe.cards.approved)' }
   When method post
   Then status 201
   And match response.pago contains { reserva_id: '#(reserva.id)', estado: 'aprobado', monto: '#(cotizacion.total)' }
@@ -47,7 +47,7 @@ Scenario Outline: el pago con tarjeta <caso> responde <status> y deja la reserva
   * def reservaId = response.reserva.id
 
   Given path 'reservas', reservaId, 'pago'
-  And request { tarjeta_prueba: '#(cards[card])' }
+  And request { tarjeta_prueba: '#(ticketpe.cards[card])' }
   When method post
   Then status <status>
   And match karate.get('response.pago.estado') == estadoPago
@@ -69,12 +69,12 @@ Scenario: una reserva ya pagada no se puede volver a pagar
   * def reservaId = response.reserva.id
 
   Given path 'reservas', reservaId, 'pago'
-  And request { tarjeta_prueba: '#(cards.approved)' }
+  And request { tarjeta_prueba: '#(ticketpe.cards.approved)' }
   When method post
   Then status 201
 
   Given path 'reservas', reservaId, 'pago'
-  And request { tarjeta_prueba: '#(cards.approved)' }
+  And request { tarjeta_prueba: '#(ticketpe.cards.approved)' }
   When method post
   Then status 409
   And match response.error == 'ya_confirmada'
@@ -115,7 +115,7 @@ Scenario: un usuario no puede ver la reserva de otro
   * def reservaId = response.reserva.id
 
   * def intruso = call read('helpers/usuario.feature')
-  * configure headers = { Authorization: '#("Bearer " + intruso.token)' }
+  * configure headers = auth.bearer(intruso.token)
   Given path 'reservas', reservaId
   When method get
   Then status 403

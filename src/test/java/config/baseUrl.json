@@ -1,0 +1,5 @@
+{
+    "prod": "https://testathon.testingperu.com/api/core",
+    "stag": "https://testathon.stag.testingperu.com/api/core",
+    "local": "http://localhost:4100/api/core"
+  }

@@ -20,7 +20,7 @@ Scenario Outline: sin token, <caso> responde 401
     | el reporte ventas | 'reportes', 'ventas'        | { evento_id: 1 }| null                   | get   |
 
 Scenario Outline: el rol asistente no puede usar <caso>
-  * configure headers = { Authorization: '#("Bearer " + alta.token)' }
+  * configure headers = auth.bearer(alta.token)
   Given path <ruta>
   And params <query>
   And request <cuerpo>

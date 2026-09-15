@@ -1,31 +1,35 @@
+// Capa del proyecto: ambientes, credenciales y timeouts.
+// Depende de `utils` / `auth` que expone karate-base.js.
+// https://docs.karatelabs.io/core-syntax/configuration
+
 function fn() {
-  var environments = {
-    prod: 'https://testathon.testingperu.com/api/core',
-    stag: 'https://testathon.stag.testingperu.com/api/core',
-    local: 'http://localhost:4100/api/core'
-  };
+  var env = karate.env;
+  var isCi = !!karate.properties['ci'];
 
-  var testCards = {
-    prod: { approved: '4242424242424242', declined: '4000000000000002' },
-    stag: { approved: '4242424242424242', declined: '4000000000000002' },
-    local: { approved: '4242424242424242', declined: '4000000000000002' }
-  };
+  var baseUrl = utils.loadConfig('baseUrl');
 
-  // -Denvironment=local ó -Dkarate.env=local
-  var env = karate.properties['environment'] || karate.env;
-  var baseUrl = environments[env];
   if (!baseUrl) {
-    karate.fail('ambiente desconocido: ' + env + '. Válidos: ' + Object.keys(environments));
+    throw 'ambiente desconocido: ' + env + ' (usar -Dkarate.env=prod|stag|local)';
   }
 
-  karate.log('ambiente:', env);
+  karate.log('ambiente:', env, '| baseUrl:', baseUrl, '| ci:', isCi);
+
   karate.configure('connectTimeout', 10000);
   karate.configure('readTimeout', 30000);
+  karate.configure('retry', { count: 3, interval: 1000 });
+
+  karate.configure('logPrettyRequest', !isCi);
+  karate.configure('logPrettyResponse', !isCi);
 
   return {
-    env,
-    baseUrl,
-    password: 'Qa123456',
-    cards: testCards[env]
+    env: env,
+    baseUrl: baseUrl,
+    ticketpe: {
+      cards: utils.loadConfig('cards'),
+      password: utils.randomPassword(),
+      newEmail: function () {
+        return 'qa.karate.' + java.util.UUID.randomUUID() + '@testingperu.com';
+      }
+    }
   };
 }

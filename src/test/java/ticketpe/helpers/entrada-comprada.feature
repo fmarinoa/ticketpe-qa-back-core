@@ -5,7 +5,7 @@ Scenario: comprar
   * def cantidad = karate.get('cantidad', 1)
   * def elegido = call read('classpath:ticketpe/helpers/evento-vendible.feature') { cantidad: '#(cantidad)' }
   Given url baseUrl
-  And configure headers = { Authorization: '#("Bearer " + token)' }
+  And configure headers = auth.bearer(token)
   And path 'reservas'
   And request { evento_id: '#(elegido.evento_id)', tipo: '#(elegido.tipo)', cantidad: '#(cantidad)' }
   When method post
@@ -13,7 +13,7 @@ Scenario: comprar
   * def reserva = response.reserva
 
   Given path 'reservas', reserva.id, 'pago'
-  And request { tarjeta_prueba: '#(cards.approved)' }
+  And request { tarjeta_prueba: '#(ticketpe.cards.approved)' }
   When method post
   Then status 201
   * def entradas = response.entradas

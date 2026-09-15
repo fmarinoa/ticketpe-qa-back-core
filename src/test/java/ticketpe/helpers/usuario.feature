@@ -2,7 +2,9 @@
 Feature: alta de un asistente nuevo (helper reutilizable)
 
 Scenario: registrar asistente
-  * def correo = 'qa.karate.' + java.util.UUID.randomUUID() + '@testingperu.com'
+  * def correo = ticketpe.newEmail()
+  # la password es del usuario, no del escenario: viaja con él y sobrevive al callonce
+  * def password = utils.randomPassword()
   Given url baseUrl
   And path 'auth', 'registro'
   And request { nombre: 'QA Karate', correo: '#(correo)', password: '#(password)' }

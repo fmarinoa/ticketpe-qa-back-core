@@ -3,21 +3,20 @@ Feature: Autenticación de asistentes
 
 Background:
   * url baseUrl
-  * def nuevoCorreo = function(){ return 'qa.karate.' + java.util.UUID.randomUUID() + '@testingperu.com' }
 
 @smoke
 Scenario: registro de un asistente nuevo devuelve token y usuario verificado
-  * def correo = nuevoCorreo()
+  * def correo = ticketpe.newEmail()
   Given path 'auth', 'registro'
-  And request { nombre: 'QA Karate', correo: '#(correo)', password: '#(password)' }
+  And request { nombre: 'QA Karate', correo: '#(correo)', password: '#(ticketpe.password)' }
   When method post
   Then status 201
   And match response.token == '#regex ^usr_[a-f0-9]{24}$'
   And match response.usuario == { id: '#uuid', nombre: 'QA Karate', correo: '#(correo)', rol: 'asistente', verificado: true }
 
 Scenario: no se puede registrar dos veces el mismo correo
-  * def correo = nuevoCorreo()
-  * def cuerpo = { nombre: 'QA Karate', correo: '#(correo)', password: '#(password)' }
+  * def correo = ticketpe.newEmail()
+  * def cuerpo = { nombre: 'QA Karate', correo: '#(correo)', password: '#(ticketpe.password)' }
   Given path 'auth', 'registro'
   And request cuerpo
   When method post
@@ -46,7 +45,7 @@ Scenario Outline: el registro valida los campos obligatorios: <caso>
 Scenario: login con credenciales válidas devuelve token
   * def alta = call read('helpers/usuario.feature')
   Given path 'auth', 'login'
-  And request { correo: '#(alta.correo)', password: '#(password)' }
+  And request { correo: '#(alta.correo)', password: '#(alta.password)' }
   When method post
   Then status 200
   And match response.token == '#string'
@@ -62,7 +61,7 @@ Scenario: login con contraseña incorrecta
 
 Scenario: login con un correo no registrado
   Given path 'auth', 'login'
-  And request { correo: 'no.existe.qa@testingperu.com', password: '#(password)' }
+  And request { correo: 'no.existe.qa@testingperu.com', password: '#(ticketpe.password)' }
   When method post
   Then status 401
   And match response.error == 'correo_no_registrado'
@@ -70,7 +69,7 @@ Scenario: login con un correo no registrado
 Scenario: /auth/me devuelve el usuario dueño del token
   * def alta = call read('helpers/usuario.feature')
   Given path 'auth', 'me'
-  And header Authorization = 'Bearer ' + alta.token
+  And headers auth.bearer(alta.token)
   When method get
   Then status 200
   And match response.usuario == alta.usuario

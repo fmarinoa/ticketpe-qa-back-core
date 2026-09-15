@@ -5,7 +5,7 @@ Background:
   * url baseUrl
   # usuario nuevo por escenario: el API limita a 4 entradas por evento y usuario
   * def alta = call read('helpers/usuario.feature')
-  * configure headers = { Authorization: '#("Bearer " + alta.token)' }
+  * configure headers = auth.bearer(alta.token)
 
 @smoke
 Scenario: mis entradas lista las entradas emitidas con datos del evento
@@ -41,8 +41,7 @@ Scenario: el reembolso de una entrada de un evento futuro queda solicitado
   Given path 'mis-entradas'
   When method get
   Then status 200
-  * def mia = response.entradas.filter(function(e){ return e.id == compra.entrada.id })[0]
-  And match mia.reembolso_estado == 'solicitado'
+  And match response.entradas contains deep { id: '#(compra.entrada.id)', reembolso_estado: 'solicitado' }
 
 @smoke
 Scenario: transferir una entrada la deja a nombre del destinatario
@@ -59,7 +58,7 @@ Scenario: transferir una entrada la deja a nombre del destinatario
   Then status 403
   And match response.error == 'no_autorizado'
 
-  * configure headers = { Authorization: '#("Bearer " + destino.token)' }
+  * configure headers = auth.bearer(destino.token)
   Given path 'entradas', compra.entrada.id
   When method get
   Then status 200
@@ -74,7 +73,7 @@ Scenario: una entrada solo se puede transferir una vez
   Then status 200
 
   * def segundo = call read('helpers/usuario.feature')
-  * configure headers = { Authorization: '#("Bearer " + primero.token)' }
+  * configure headers = auth.bearer(primero.token)
   Given path 'entradas', compra.entrada.id, 'transferir'
   And request { correo_destino: '#(segundo.correo)' }
   When method post
