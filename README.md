@@ -76,7 +76,7 @@ pom.xml
 src/test/java/
   karate-config.js                    ambientes, credenciales y tarjetas de prueba
   ticketpe/
-    TicketpeRunnerTest.java           runner JUnit 5 (Runner.path("classpath:ticketpe").parallel(5))
+    runners/RunnerTest.java           runner JUnit 5 (Runner.path("classpath:ticketpe").parallel(5))
     salud.feature                     health check
     auth.feature                      registro, login, /auth/me
     eventos.feature                   catálogo, ficha, disponibilidad
@@ -106,6 +106,7 @@ porque el inventario del ambiente cambia.
 | Tag | Dónde |
 |---|---|
 | `@smoke` | `salud.feature` (a nivel Feature) más el escenario feliz de auth, catálogo, cotización, compra y entradas |
+| `@health` | el escenario de health check en `salud.feature` |
 | `@auth` | `auth.feature` |
 | `@catalogo` | `eventos.feature` |
 | `@cotizacion` | `cotizaciones.feature` |
@@ -116,7 +117,8 @@ porque el inventario del ambiente cambia.
 | `@negocio` | 1 escenario en `cotizaciones.feature` que documenta que cotizar no valida cupo |
 | `@ignore` | los 4 helpers en `helpers/` |
 
-No existe un tag propio para `salud.feature`: se selecciona con `@smoke`.
+`salud.feature` se selecciona con `@smoke` (a nivel Feature) o con `@health`,
+que aísla solo el health check.
 
 ## Abrir en IntelliJ IDEA
 
