@@ -7,7 +7,7 @@ qué) y `TAE.md` (gTAA, TAS vs SUT, trazabilidad y métricas); no los repite.
 
 ## Qué es esto
 
-Suite E2E de API contra **TicketPe Núcleo** con Karate 1.5.1 + Maven + JUnit 5.
+Suite E2E de API contra **TicketPe Núcleo** con Karate 2.1.2 + Maven + JUnit 6 (Java 21+).
 No hay código de producción: todo el repo es test. `src/main` no existe.
 
 ## Comandos
@@ -34,9 +34,11 @@ scripts/resumen-corrida.sh                                              # resume
   SUT, `FrameworkTest` prueba el framework.
 - **`-Dkarate.options` se aplica a los dos runners** (es propiedad de JVM). Un
   filtro de tag que no matchee `framework/utils.feature` lo saltea.
-- Reporte: `target/karate-reports/karate-summary.html`.
-- `-Dci=true` compacta el log de consola (`logPrettyRequest` /
-  `logPrettyResponse` en `false`); el reporte HTML no cambia. Lo pone el
+- Reporte: `target/karate-reports/karate-summary.html`; `RunnerTest` suma
+  `junit-xml/`, `cucumber-json/` y `karate-json/karate-events.jsonl` (lo leen
+  `scripts/*.sh`).
+- `-Dci=true` compacta el log (`configure logging` con `pretty: false`); el
+  reporte HTML no cambia. Lo pone el
   workflow; localmente se omite.
 - `mvn` propaga las `-D` al JVM de Surefire y `karate-config.js` las lee con
   `karate.properties[...]`. Ese es el único canal de configuración.
@@ -49,7 +51,7 @@ En [`ARCHITECTURE.md`](ARCHITECTURE.md): las dos capas de configuración
 (`karate-base.js` genérica → `karate-config.js` del proyecto) y su orden de
 evaluación, los ambientes versionados en `config/*.json`, el classpath de
 `src/test/java`, el paralelismo de 5 hilos y las restricciones de Karate que
-rompen la corrida entera (claves de `karate.configure`, `logModifier`).
+rompen la corrida entera (claves de `karate.configure`, comparación de strings en JS).
 
 **Leerlo antes de tocar `karate-base.js`, `karate-config.js`, `config/*.json` o
 el `pom.xml`.**
@@ -108,9 +110,9 @@ el `pom.xml`.**
 `workflow_dispatch` → suite completa (el dispatch acepta `tags` y `environment`).
 Siempre corre con `-Dci=true`.
 Sube el reporte como artifact, escribe un resumen por feature en el Job Summary
-y, fuera de los PR, despliega el reporte a GitHub Pages (copia
-`karate-summary.html` a `index.html`). El build falla si falla un escenario
-(`assertEquals(0, results.getFailCount())`).
+y, fuera de los PR, despliega el reporte a GitHub Pages (Karate v2
+ya genera `index.html`). El build falla si falla un escenario
+(`assertFalse(results.isFailed())`).
 
 Los `uses:` están **fijados por hash de commit** con el tag en comentario. Al
 actualizar una action hay que cambiar el hash, no el tag.

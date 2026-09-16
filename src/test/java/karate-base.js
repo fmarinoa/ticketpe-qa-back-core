@@ -18,6 +18,10 @@ function fn() {
       randomPassword: function () {
         return String(java.util.UUID.randomUUID()).split('-').join('').substring(0, 13);
       },
+      // ISO-8601 UTC; Karate v2 convierte Instant a Date JS y su toString no es ISO
+      now: function () {
+        return new Date().toISOString();
+      },
       minutesBetween: function (desde, hasta) {
         var ms = java.time.Instant.parse(hasta).toEpochMilli()
                - java.time.Instant.parse(desde).toEpochMilli();

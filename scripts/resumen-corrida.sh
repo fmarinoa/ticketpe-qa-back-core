@@ -7,11 +7,11 @@
 set -euo pipefail
 
 DIR=${1:-target/karate-reports}
-shopt -s nullglob
-REPORTES=("$DIR"/*.karate-json.txt)
-[ ${#REPORTES[@]} -gt 0 ] || { echo "No hay reportes en $DIR (la suite no llego a ejecutar)"; exit 0; }
+EVENTOS="$DIR/karate-json/karate-events.jsonl"
+[ -f "$EVENTOS" ] || { echo "No hay reportes en $DIR (la suite no llego a ejecutar)"; exit 0; }
 
-jq -rs '
+# un resultado por feature de primer nivel; los helpers llamados (callDepth > 0) no cuentan
+jq -c 'select(.type == "FEATURE_EXIT" and .data.callDepth == 0) | .data' "$EVENTOS" | jq -rs '
   def tags: [ .tags[]? | (if type == "object" then .name else . end) | sub("^@"; "") ];
   def tag($re): first(.tags[] | select(test($re))) // "—";
   def rango: {critico: 0, alto: 1, medio: 2, bajo: 3}[sub("^RIESGO-"; "") | ascii_downcase] // 9;
@@ -28,7 +28,7 @@ jq -rs '
   [ .[] | .relativePath as $feat | .scenarioResults[]?
     | tags as $t
     | { falla: (.failed == true), nombre: .name, ubicacion: "\($feat):\(.line)", tags: $t,
-        error: ((.error // "\n") | split("\n")
+        error: ((.error // "\n") | split("\n") | map(select(startswith("#") | not))
                 | if .[0] | startswith("match failed") then "\(.[0]): \(.[1] // "" | sub("^\\s+"; ""))"
                   else .[0] | sub(", response time.*"; "") end) }
     | . + { caso: tag("^TC-API-"), esc: tag("^ESC[0-9]+$"), sev: tag("^(critico|alto|medio|bajo)$"),
@@ -57,4 +57,4 @@ jq -rs '
     "### Por escenario de la matriz", "", tabla($casos; "esc"; "ESC"), "",
     "### Por riesgo", "", tabla($casos; "riesgo"; "Riesgo"), "",
     "### Por requisito", "", tabla($casos; "req"; "Requisito")
-' "${REPORTES[@]}"
+'

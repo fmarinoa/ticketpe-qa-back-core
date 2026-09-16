@@ -1,6 +1,6 @@
 # ARCHITECTURE
 
-Decisiones estructurales de la suite y las restricciones de Karate 1.5.1 que las
+Decisiones estructurales de la suite y las restricciones de Karate 2.1.2 que las
 fuerzan. Solo lo que no se deduce leyendo el código.
 
 Uso y comandos: [`README.md`](README.md) · qué se automatiza y por qué:
@@ -25,7 +25,7 @@ karate-config.js      proyecto TicketPe          env, baseUrl, ticketpe.*
 
 | Capa | Qué puede saber | Qué expone hoy |
 |---|---|---|
-| `karate-base.js` | nada de TicketPe; reusable en otro repo | `utils.loadConfig(nombre)`, `utils.round(n, decimales)`, `utils.minutesBetween(desde, hasta)`, `utils.randomPassword()`, `auth.bearer(token)`, `traceId` |
+| `karate-base.js` | nada de TicketPe; reusable en otro repo | `utils.loadConfig(nombre)`, `utils.round(n, decimales)`, `utils.now()`, `utils.minutesBetween(desde, hasta)`, `utils.randomPassword()`, `auth.bearer(token)`, `traceId` |
 | `karate-config.js` | ambientes, credenciales, tarjetas, dominio del correo | `env`, `baseUrl`, `ticketpe.cards`, `ticketpe.password`, `ticketpe.newEmail()` |
 | `helpers/*.feature` | todo, incluido HTTP | fixtures `@ignore` vía `call` / `callonce` |
 
@@ -93,8 +93,9 @@ Dos razones, y la segunda es la que importa:
 
 1. El repo no guarda una clave reutilizable.
 2. **El reporte HTML se publica en GitHub Pages y loguea los request bodies.**
-   Enmascararlos exigiría una clase Java (ver abajo). Lo que queda publicado es
-   la credencial de un usuario desechable que ya no sirve para nada.
+   `karate-config.js` enmascara `Authorization`, `$..password` y `$..token`
+   con `configure logging.mask`; aun así, lo que se loguea es la credencial de
+   un usuario desechable.
 
 **La password pertenece al usuario, no al escenario.**
 `helpers/usuario.feature` acuña la suya y la devuelve junto a `correo`, `token`
@@ -127,8 +128,8 @@ cabeceras o con una inválida.
 
 `framework/utils.feature` prueba `utils.*`, `auth.*` y `ticketpe.*` sin hacer
 HTTP, con su propio runner (`framework/FrameworkTest.java`) y su propio
-`reportDir` — si compartiera `target/karate-reports`, el segundo runner pisaría
-el `karate-summary-json.txt` que el workflow lee para el Job Summary.
+`outputDir` — si compartiera `target/karate-reports`, el segundo runner pisaría
+el `karate-json/karate-events.jsonl` que el workflow lee para el Job Summary.
 
 Lleva `@smoke` además de `@framework` para que corra en los PR: el filtro de
 tags de `-Dkarate.options` es global a la JVM y se aplica también a este runner.
@@ -138,8 +139,9 @@ El razonamiento completo, en [`TAE.md`](TAE.md#1-tas-y-sut-dos-cosas-que-se-prue
 
 | Restricción | Consecuencia |
 |---|---|
-| `karate.configure` valida la clave contra una lista cerrada | Una clave inventada (`logging`) tira `RuntimeException` en **cada** escenario, no un warning. En uso: `connectTimeout`, `readTimeout`, `retry`, `headers`, `logPrettyRequest`, `logPrettyResponse` |
-| `configure logModifier` hace `checkcast` a `HttpLogModifier` | Enmascarar secretos en el log exige una clase Java; un objeto JS revienta con `ClassCastException`. Por eso el reporte publicado en Pages no enmascara: los tokens son de usuarios desechables por corrida |
+| Las claves de log de v1 (`logPrettyRequest`, `logPrettyResponse`, `printEnabled`) son no-op silenciosos en v2 | No fallan, simplemente no hacen nada. Todo va por `configure logging = { pretty, report, console, mask }`. En uso: `connectTimeout`, `readTimeout`, `retry`, `headers`, `logging` |
+| El motor JS de v2 no compara strings con `<` / `>` | `'2099' > '2026'` da `false` sin error: un `filter` por fecha devuelve vacío. Fechas: `utils.minutesBetween(utils.now(), fecha)` |
+| Un `java.time.Instant` pasa a JS como `Date` | `Instant.now().toString()` da `Wed Sep 16 2026 ...`, no ISO. Para "ahora": `utils.now()` |
 | Un test JUnit levanta una carpeta entera | Para elegir escenarios el filtro es `-Dkarate.options`, no `-Dtest=`. `-Dtest=` solo elige runner (`RunnerTest` = SUT, `FrameworkTest` = TAS) |
 | `-Dkarate.options` es una propiedad de JVM, no del runner | El filtro de tags se aplica a **todos** los runners de la corrida. Por eso `framework/utils.feature` lleva `@smoke`: sin él, un PR no verificaría el TAS |
 | `karate.properties[...]` lee propiedades de JVM, no env vars | El `CI=true` que GitHub Actions ya expone no llega solo: el workflow pasa `-Dci=true` explícito |

@@ -15,13 +15,13 @@ trap 'rm -f "$EVIDENCIA"' EXIT
   echo "- commit: $(git rev-parse --short HEAD 2>/dev/null || echo n/a) | rama: $(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo n/a)"
   [ -n "${GITHUB_RUN_ID:-}" ] && echo "- run: ${GITHUB_SERVER_URL:-https://github.com}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
   echo
-  if [ -f "$DIR/karate-summary-json.txt" ]; then
-    jq -r '"ambiente: \(.env // "n/a") | escenarios fallidos: \(.scenariosfailed) | pasados: \(.scenariosPassed)"' "$DIR/karate-summary-json.txt"
+  EVENTOS="$DIR/karate-json/karate-events.jsonl"
+  if [ -f "$EVENTOS" ]; then
+    jq -rs '(map(select(.type == "SUITE_ENTER"))[0].data.env // "n/a") as $env
+      | map(select(.type == "SUITE_EXIT"))[0].data.summary
+      | "ambiente: \($env) | escenarios fallidos: \(.scenariosFailed) | pasados: \(.scenariosPassed)"' "$EVENTOS"
     echo
-  fi
-  for f in "$DIR"/*.karate-json.txt; do
-    [ -e "$f" ] || continue
-    jq -r '
+    jq -c 'select(.type == "FEATURE_EXIT" and .data.callDepth == 0) | .data' "$EVENTOS" | jq -r '
       .relativePath as $feat
       | .scenarioResults[] | select(.failed)
       | "## \($feat):\(.line) — \(.name)  [\([.tags[]? | if type=="object" then .name else . end] | join(","))]",
@@ -30,8 +30,8 @@ trap 'rm -f "$EVIDENCIA"' EXIT
             ((.result.errorMessage // "") | .[0:1500]),
             "```", ((.stepLog // "") | .[-2500:]), "```"
         )
-    ' "$f"
-  done
+    '
+  fi
 } > "$EVIDENCIA"
 
 grep -q '^## ' "$EVIDENCIA" || { echo "Sin escenarios fallidos en $DIR"; exit 0; }

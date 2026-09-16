@@ -13,15 +13,27 @@
 
   <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-    <maven.compiler.release>17</maven.compiler.release>
-    <karate.version>1.5.1</karate.version>
+    <maven.compiler.release>21</maven.compiler.release>
+    <karate.version>2.1.2</karate.version>
   </properties>
 
   <dependencies>
     <dependency>
       <groupId>io.karatelabs</groupId>
-      <artifactId>karate-junit5</artifactId>
+      <artifactId>karate-junit6</artifactId>
       <version>${karate.version}</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.junit.jupiter</groupId>
+      <artifactId>junit-jupiter</artifactId>
+      <version>6.1.2</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>ch.qos.logback</groupId>
+      <artifactId>logback-classic</artifactId>
+      <version>1.6.1</version>
       <scope>test</scope>
     </dependency>
   </dependencies>

@@ -15,6 +15,10 @@ Scenario: utils.minutesBetween mide minutos entre dos instantes ISO
   * match utils.minutesBetween('2026-09-15T10:00:00Z', '2026-09-15T10:15:00Z') == 15
   * match utils.minutesBetween('2026-09-15T10:00:00Z', '2026-09-15T09:30:00Z') == -30
 
+Scenario: utils.now devuelve el instante actual en ISO comparable con minutesBetween
+  * match utils.now() == '#regex ^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d{3}Z$'
+  * assert utils.minutesBetween(utils.now(), '2099-01-01T00:00:00.000Z') > 0
+
 Scenario: utils.randomPassword acuña una credencial distinta en cada llamada
   * def a = utils.randomPassword()
   * def b = utils.randomPassword()

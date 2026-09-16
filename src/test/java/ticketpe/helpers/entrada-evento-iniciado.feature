@@ -12,9 +12,8 @@ Scenario: buscar entrada
   And path 'mis-entradas'
   When method get
   Then status 200
-  * def ahora = java.time.Instant.now().toString()
   # ponytail: pool finito; si el API tiene el bug, cada corrida consume una entrada sembrada
-  * def candidatas = response.entradas.filter(function(e){ return e.fecha_inicio < ahora && e.estado == 'emitida' && !e.transferida && !e.reembolso_estado })
+  * def candidatas = response.entradas.filter(function(e){ return utils.minutesBetween(utils.now(), e.fecha_inicio) < 0 && e.estado == 'emitida' && !e.transferida && !e.reembolso_estado })
   * match candidatas == '#[_ > karate.get("indice", 0)]'
   * def entrada = candidatas[karate.get('indice', 0)]
   * def token = dueno.token

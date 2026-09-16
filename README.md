@@ -1,7 +1,7 @@
 # ticketpe-qa-back-core
 
 Pruebas E2E de backend para la API **TicketPe Núcleo**
-(`https://testathon.testingperu.com/api/core`) con [Karate](https://karatelabs.github.io/karate/) 1.5.1 sobre Maven + JUnit 5.
+(`https://testathon.testingperu.com/api/core`) con [Karate](https://docs.karatelabs.io/) 2.1.2 sobre Maven + JUnit 6.
 
 > **Estado al 2026-09-16:** suite reestructurada a los 19 casos automatizables de
 > la matriz `diseno-pruebas/API.tsv` (45 escenarios con los Examples). Contra
@@ -10,7 +10,7 @@ Pruebas E2E de backend para la API **TicketPe Núcleo**
 
 ## Requisitos
 
-- Java 17+ (el `pom.xml` compila con `maven.compiler.release=17`; el SDK del IDE puede ser mayor, p. ej. Java 26)
+- Java 21+ (Karate v2 lo exige; el `pom.xml` compila con `maven.compiler.release=21`; el SDK del IDE puede ser mayor, p. ej. Java 26)
 - Maven 3.9+
 
 ## Ejecutar
@@ -66,7 +66,8 @@ al abrir el proyecto y aparecen en el selector de Run:
 Para uno nuevo: duplicar un `.run/*.run.xml`, cambiar `name` y los `<option value="-D...">`.
 Si lo creas desde la UI, marca **Store as project file** para que quede versionado.
 
-Reporte HTML: `target/karate-reports/karate-summary.html`
+Reporte HTML: `target/karate-reports/karate-summary.html` (dashboard con filtro por tags; `karate-timeline.html` muestra el uso de hilos).
+`RunnerTest` también emite `junit-xml/`, `cucumber-json/` y `karate-json/karate-events.jsonl` (el stream que leen los scripts).
 
 Surefire propaga las `-D` del comando `mvn` al JVM de los tests, y
 `karate-config.js` las lee con `karate.properties[...]`.
@@ -85,7 +86,7 @@ src/test/java/
     baseUrl.json                      URL base por ambiente
     cards.json                        tarjetas de prueba por ambiente
   ticketpe/
-    runners/RunnerTest.java           runner JUnit 5 (Runner.path("classpath:ticketpe").parallel(5))
+    runners/RunnerTest.java           runner JUnit (Runner.path("classpath:ticketpe").parallel(5))
     salud.feature                           gate de ambiente del CI
     esc01-control-acceso.feature            CP01-CP03  rol x endpoint, entrada ajena, escalada en registro
     esc02-precio-cupones.feature            CP05-CP07  desglose al céntimo, cupón inválido, cupones apilados
@@ -162,7 +163,7 @@ en `mensaje` el nombre y correo del dueño (Ley 29733).
 ## Abrir en IntelliJ IDEA
 
 1. `File > Open`, seleccionar el **`pom.xml`** de la raíz (no la carpeta) y elegir **Open as Project**. Así IntelliJ lo importa como proyecto Maven y resuelve las dependencias de Karate.
-2. `File > Project Structure > Project`: cualquier SDK Java 17+ sirve (p. ej. Java 26); el `pom.xml` compila a `release 17`.
+2. `File > Project Structure > Project`: cualquier SDK Java 21+ sirve (p. ej. Java 26); el `pom.xml` compila a `release 21`.
 3. Plugins recomendados: **Cucumber for Java** y **Gherkin** (dan sintaxis, navegación y ejecución de escenarios sueltos desde el gutter).
 4. `src/test/java` es a la vez fuente de tests y test resource (los `.feature`, los `.json` y los `.js` se copian al classpath vía la sección `<testResources>` del `pom.xml`).
 
@@ -209,8 +210,7 @@ build falla si falla un escenario.
 
 Fuera de los PR, el reporte se despliega además a **GitHub Pages**, así que la
 última corrida siempre queda en una URL fija (`https://<usuario>.github.io/<repo>/`).
-Karate genera `karate-summary.html`; el workflow lo copia a `index.html` porque
-Pages necesita ese nombre.
+Karate v2 ya genera el `index.html` que Pages necesita.
 
 > Para que el deploy funcione: **Settings > Pages > Source = GitHub Actions**
 > (una sola vez, en el repo de GitHub).

@@ -35,7 +35,7 @@ jobs:
       - uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6.0.1
         with:
           distribution: temurin
-          java-version: '17'
+          java-version: '21'
           cache: maven
 
       - name: Definir alcance
@@ -86,12 +86,6 @@ jobs:
           name: karate-report-${{ github.run_number }}
           path: target/karate-reports
           retention-days: 14
-
-      - name: Preparar reporte para Pages
-        if: always() && github.event_name != 'pull_request'
-        run: |
-          [ -d target/karate-reports ] || exit 0
-          cp target/karate-reports/karate-summary.html target/karate-reports/index.html
 
       - name: Empaquetar para Pages
         if: always() && github.event_name != 'pull_request'
