@@ -5,10 +5,14 @@ Scenario: elegir
   * def cantidad = karate.get('cantidad', 1)
   Given url baseUrl
   And path 'eventos'
+  And param limite = 200
   When method get
   Then status 200
   * def ahora = java.time.Instant.now().toString()
-  * def futurosPagados = response.eventos.filter(function(e){ return !e.es_gratuito && e.fecha_inicio > ahora })
+  # soloEvento / excluirEvento: para fijar o evitar el evento del organizador de pruebas
+  * def soloEvento = karate.get('soloEvento', null)
+  * def excluirEvento = karate.get('excluirEvento', null)
+  * def futurosPagados = response.eventos.filter(function(e){ return !e.es_gratuito && e.fecha_inicio > ahora && (soloEvento == null || e.id == soloEvento) && e.id != excluirEvento })
   * def elegir =
     """
     function(eventos) {

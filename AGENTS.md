@@ -2,8 +2,8 @@
 
 Guía para agentes de codificación que trabajen en este repositorio. Agnóstica de
 proveedor. Complementa a `ARCHITECTURE.md` (decisiones estructurales),
-`README.md` (uso humano) y `STRATEGY.md` (criterios de qué se automatiza y por
-qué); no los repite.
+`README.md` (uso humano), `STRATEGY.md` (criterios de qué se automatiza y por
+qué) y `TAE.md` (gTAA, TAS vs SUT, trazabilidad y métricas); no los repite.
 
 ## Qué es esto
 
@@ -16,18 +16,24 @@ No hay código de producción: todo el repo es test. `src/main` no existe.
 mvn test -Dkarate.env=prod                                              # suite completa (5 hilos)
 mvn test -Dkarate.env=stag                                              # otro ambiente
 mvn test -Dkarate.env=prod "-Dkarate.options=--tags @smoke"             # por tag
-mvn test -Dkarate.env=prod "-Dkarate.options=--tags @compra,@entradas"  # varios tags (OR)
-mvn test -Dkarate.env=prod "-Dkarate.options=--tags ~@negocio"          # excluir
-mvn test -Dkarate.env=prod "-Dkarate.options=classpath:ticketpe/compra.feature"        # un feature
-mvn test -Dkarate.env=prod "-Dkarate.options=classpath:ticketpe/compra.feature:12"     # un escenario (por línea)
+mvn test -Dkarate.env=prod "-Dkarate.options=--tags @ESC03,@ESC06"      # varios tags (OR)
+mvn test -Dkarate.env=prod "-Dkarate.options=--tags ~@critico"          # excluir
+mvn test -Dkarate.env=prod "-Dkarate.options=classpath:ticketpe/esc03-cobro-reserva.feature"     # un feature
+mvn test -Dkarate.env=prod "-Dkarate.options=classpath:ticketpe/esc03-cobro-reserva.feature:11"  # un escenario (por línea)
 mvn test -Dkarate.env=prod -Dci=true                                    # modo CI (log compacto)
+mvn test -Dkarate.env=prod -Dtest=RunnerTest "-Dkarate.options=--tags @health"   # gate de salud del ambiente
+mvn test -Dkarate.env=prod -Dtest=FrameworkTest                          # solo los tests del framework (TAS)
+scripts/resumen-corrida.sh                                              # resumen y trazabilidad (tras un mvn test)
 ```
 
 - `-Dkarate.env=` es **obligatorio**. Sin él (o con valor inválido)
   `karate-config.js` corta la corrida con `ambiente desconocido: ...`.
 - **Para correr un escenario suelto se usa `-Dkarate.options`, no `-Dtest=`.**
-  Existe un único test JUnit (`ticketpe/runners/RunnerTest.java`) que levanta
-  toda la carpeta; filtrar por clase no sirve.
+  `RunnerTest` levanta `classpath:ticketpe` entero; filtrar por clase no elige
+  escenarios. `-Dtest=` solo sirve para elegir runner: `RunnerTest` prueba el
+  SUT, `FrameworkTest` prueba el framework.
+- **`-Dkarate.options` se aplica a los dos runners** (es propiedad de JVM). Un
+  filtro de tag que no matchee `framework/utils.feature` lo saltea.
 - Reporte: `target/karate-reports/karate-summary.html`.
 - `-Dci=true` compacta el log de consola (`logPrettyRequest` /
   `logPrettyResponse` en `false`); el reporte HTML no cambia. Lo pone el
@@ -59,11 +65,25 @@ el `pom.xml`.**
   loguear a ese usuario se usa `alta.password`, nunca `ticketpe.password`. Si la
   credencial fuera global, un `callonce` la desincronizaría
   (ver [`ARCHITECTURE.md`](ARCHITECTURE.md#credenciales)).
-- **Un tag por dominio** (`@auth`, `@catalogo`, `@cotizacion`, `@compra`,
-  `@entradas`, `@autorizacion`) a nivel Feature, más `@smoke` en el happy path de
-  cada dominio, `@datos` en los data-driven y `@negocio` en los que congelan un
-  comportamiento cuestionable del API. `salud.feature` va con `@smoke` a nivel
-  Feature (y un `@health` en su escenario).
+- **Fuente única de casos: la matriz de diseño `testathon2026/diseno-pruebas/API.tsv`.**
+  Un feature por escenario de la matriz (`escNN-*.feature`, tag `@ESCNN`), un
+  Scenario por caso (`CPNN - ...`). No se agregan casos que no estén en la matriz.
+  Los tags del Scenario son los de la columna *Tags* de la matriz
+  más `@TC-API-NN` y `@datos` si es data-driven. `salud.feature` es la única
+  excepción: es el gate de ambiente del CI (`@smoke` a nivel Feature, `@health`
+  en su escenario).
+- **Oráculo**: status e invariantes (dueño, estado, monto, cantidad de entradas)
+  tal cual la matriz; el nombre del código de error, el que emite el API cuando
+  el status coincide. Si el API no tiene código para ese caso, el de la matriz.
+- **Trazabilidad obligatoria**: `@RIESGO-{CRITICO|ALTO|MEDIO|BAJO}` a nivel
+  Feature (la severidad más alta del ESC) y `@REQ-HU-{épica}` a nivel Scenario. `scripts/resumen-corrida.sh`
+  los lee del reporte y publica, por caso (`@TC-API-*`, los Examples cuentan
+  como uno), los rojos ordenados por severidad y la cobertura por severidad, ESC,
+  riesgo y requisito en el Job Summary. El catálogo
+  de ids está en [`TAE.md`](TAE.md#3-trazabilidad-riesgo--requisito--escenario).
+- **Una función nueva en `karate-base.js` lleva su escenario en
+  `framework/utils.feature`.** Ese feature prueba el TAS, no el SUT: no hace
+  HTTP y corre con `FrameworkTest`, no con `RunnerTest`.
 - **Nombres de escenario en español**, describiendo la regla de negocio, no el
   endpoint: "no se puede reservar más entradas de las disponibles".
 - **Aserciones de contrato, no solo de status**: `'#uuid'`, `'#number'`,
@@ -77,9 +97,10 @@ el `pom.xml`.**
 - **Cero JS suelto en los asserts.** Antes de escribir un `function(){...}` en
   un feature, aplicar el árbol de decisión de
   [`ARCHITECTURE.md`](ARCHITECTURE.md#dónde-va-una-función-nueva).
-- **Un bug del API se documenta, no se esconde**: escenario con `@negocio` que
-  fija el comportamiento actual, más una fila en la tabla de Hallazgos del
-  README.
+- **`callonce` cachea por el texto de la línea**: dos `callonce` idénticos en un
+  feature devuelven la misma entidad. Para dos usuarios distintos, `call`.
+- **Un bug del API se documenta, no se esconde**: el escenario queda en rojo con
+  la aserción de la matriz, más una fila en la tabla de Hallazgos del README.
 
 ## CI
 
@@ -107,11 +128,10 @@ actualizar una action hay que cambiar el hash, no el tag.
 | `POST /entradas/{id}/transferir` | `{ correo_destino }` | 200 |
 | `POST /entradas/{id}/reembolso` | `{ motivo }` | 201 |
 
-Fuera de alcance a propósito: `POST /soporte` (contrato no deducible) y los happy
-paths de `POST /checkin` y `GET /reportes/ventas` (requieren un rol que el
-registro público no entrega; solo se cubren sus 401/403).
+Datos de prueba fijos (`config/roles.json`): el organizador de pruebas es dueño
+del evento `evento_id` (check-in, reportes y `POST /cupones` solo sobre ese
+evento); `attendee` es una cuenta demo con entradas de eventos ya iniciados
+(CP19, CP21), porque no hay API para crear eventos ni mover el reloj.
 
-Hallazgo abierto: `POST /reservas/{id}/pago` emite `cantidad + 1` entradas y
-cobra solo por `cantidad`. El escenario feliz de `compra.feature` lo asserta en
-`cantidad` y por eso queda en rojo: **es un bug del API, no del test**. No
-"arreglarlo" ajustando la aserción.
+Los rojos de la suite son hallazgos del API (tabla en el README), **no del test**.
+No "arreglarlos" ajustando la aserción.

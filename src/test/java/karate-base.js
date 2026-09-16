@@ -3,7 +3,10 @@
 // https://docs.karatelabs.io/core-syntax/configuration/#advanced-karate-basejs
 
 function fn() {
+  var traceId = 'testitans-' + java.util.UUID.randomUUID();
+
   return {
+    traceId: traceId,
     utils: {
       loadConfig: function (nombre) {
         return karate.read('classpath:config/' + nombre + '.json')[karate.env];
@@ -23,7 +26,7 @@ function fn() {
     },
     auth: {
       bearer: function (token) {
-        return { Authorization: 'Bearer ' + token };
+        return { Authorization: 'Bearer ' + token, 'X-Request-Id': traceId };
       }
     }
   };

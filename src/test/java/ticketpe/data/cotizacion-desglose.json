@@ -1,0 +1,12 @@
+[
+  {
+    "caso": "2 x General (S/ 76) con cupón 10 %",
+    "tipo": "General", "cantidad": 2, "valor": 10, "precio": 76,
+    "subtotal": 152, "descuento": 15.2, "igv": 24.62, "total": 161.42
+  },
+  {
+    "caso": "borde half-up: 3 x VIP (S/ 167.20) con cupón 22 %, IGV 70.425",
+    "tipo": "VIP", "cantidad": 3, "valor": 22, "precio": 167.2,
+    "subtotal": 501.6, "descuento": 110.35, "igv": 70.43, "total": 461.68
+  }
+]

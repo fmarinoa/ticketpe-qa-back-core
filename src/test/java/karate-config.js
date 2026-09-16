@@ -18,6 +18,8 @@ function fn() {
   karate.configure('readTimeout', 30000);
   karate.configure('retry', { count: 3, interval: 1000 });
 
+  karate.configure('headers', { 'X-Request-Id': traceId });
+
   karate.configure('logPrettyRequest', !isCi);
   karate.configure('logPrettyResponse', !isCi);
 

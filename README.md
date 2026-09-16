@@ -3,9 +3,10 @@
 Pruebas E2E de backend para la API **TicketPe Núcleo**
 (`https://testathon.testingperu.com/api/core`) con [Karate](https://karatelabs.github.io/karate/) 1.5.1 sobre Maven + JUnit 5.
 
-> **Estado al 2026-09-14:** suite verificada contra `prod`: 45 de 46 escenarios
-> en verde. El único rojo es un hallazgo real del API, no un test mal escrito
-> (ver "Hallazgos").
+> **Estado al 2026-09-16:** suite reestructurada a los 19 casos automatizables de
+> la matriz `diseno-pruebas/API.tsv` (45 escenarios con los Examples). Contra
+> `prod`: 34 verdes, 11 rojos. Los rojos son hallazgos reales del API, no tests
+> mal escritos (ver "Hallazgos").
 
 ## Requisitos
 
@@ -19,9 +20,9 @@ mvn test -Dkarate.env=prod                                # toda la suite (5 hil
 mvn test -Dkarate.env=stag                                # contra staging
 mvn test -Dkarate.env=local                               # contra localhost:4100
 mvn test -Dkarate.env=prod "-Dkarate.options=--tags @smoke"             # solo el smoke
-mvn test -Dkarate.env=prod "-Dkarate.options=--tags @compra,@entradas"  # varios tags (OR)
-mvn test -Dkarate.env=prod "-Dkarate.options=--tags ~@negocio"          # excluir un tag
-mvn test -Dkarate.env=prod "-Dkarate.options=classpath:ticketpe/compra.feature"
+mvn test -Dkarate.env=prod "-Dkarate.options=--tags @ESC03,@ESC06"      # varios tags (OR)
+mvn test -Dkarate.env=prod "-Dkarate.options=--tags ~@critico"          # excluir un tag
+mvn test -Dkarate.env=prod "-Dkarate.options=classpath:ticketpe/esc03-cobro-reserva.feature"
 ```
 
 ## Ambientes
@@ -75,28 +76,38 @@ Surefire propaga las `-D` del comando `mvn` al JVM de los tests, y
 ```
 pom.xml
 src/test/java/
-  karate-base.js                      utilidades genéricas (utils.*, auth.*)
+  karate-base.js                      utilidades genéricas (utils.*, auth.*, traceId)
   karate-config.js                    ambientes, credenciales y tarjetas de prueba
+  framework/
+    FrameworkTest.java                runner del TAS (reporte aparte)
+    utils.feature                     verifica el framework, sin tocar el SUT
   config/
     baseUrl.json                      URL base por ambiente
     cards.json                        tarjetas de prueba por ambiente
   ticketpe/
     runners/RunnerTest.java           runner JUnit 5 (Runner.path("classpath:ticketpe").parallel(5))
-    salud.feature                     health check
-    auth.feature                      registro, login, /auth/me
-    eventos.feature                   catálogo, ficha, disponibilidad
-    cotizaciones.feature              cálculo de subtotal, IGV y total
-    compra.feature                    reserva -> cupón -> pago -> entradas
-    entradas.feature                  mis entradas, detalle, transferencia, reembolso
-    autorizacion.feature              401 sin token, 403 por rol
+    salud.feature                           gate de ambiente del CI
+    esc01-control-acceso.feature            CP01-CP03  rol x endpoint, entrada ajena, escalada en registro
+    esc02-precio-cupones.feature            CP05-CP07  desglose al céntimo, cupón inválido, cupones apilados
+    esc03-cobro-reserva.feature             CP08-CP09  doble pago, resultado por tarjeta
+    esc04-cupo-reserva.feature              CP11       tope de 4 por evento
+    esc05-fuga-datos.feature                CP13-CP14  QR adivinable, datos en el reporte
+    esc06-transferencia-estado-invalido.feature  CP16-CP19  usada, transferida, reembolso, evento iniciado
+    esc07-reembolso.feature                 CP20-CP21  doble reembolso, evento iniciado
+    esc08-checkin.feature                   CP22-CP23  QR anterior, doble check-in
     data/
-      cotizaciones-cantidad-invalida.json  casos de cantidad inválida
-      tarjetas.json                        caso aprobada / rechazada y su resultado esperado
+      cotizacion-desglose.json              CP05: precio, cupón y desglose esperado
+      tarjetas.json                         CP09: tarjeta y resultado esperado
     helpers/
       usuario.feature                 registra un asistente nuevo y devuelve token
-      evento-vendible.feature         elige evento futuro, pagado y con cupo
+      login.feature                   login de un rol fijo (config/roles.json)
+      evento-vendible.feature         elige evento futuro, pagado y con cupo (soloEvento / excluirEvento)
       disponibilidad.feature          consulta /eventos/{id}/disponibilidad
       entrada-comprada.feature        reserva + pago y devuelve la entrada emitida
+      cupon.feature                   el organizador crea un cupón porcentual para su evento
+      cupon-agotado.feature           cupón de un uso ya consumido
+      pago-paralelo.feature           dos pagos simultáneos con la misma Idempotency-Key
+      entrada-evento-iniciado.feature entrada vigente de un evento ya iniciado (cuenta demo)
 ```
 
 Los helpers están marcados `@ignore` (no corren solos) y evitan datos quemados:
@@ -114,20 +125,39 @@ Karate obligan a ese corte: [`ARCHITECTURE.md`](ARCHITECTURE.md).
 
 | Tag | Dónde |
 |---|---|
-| `@smoke` | `salud.feature` (a nivel Feature) más el escenario feliz de auth, catálogo, cotización, compra y entradas |
-| `@health` | el escenario de health check en `salud.feature` |
-| `@auth` | `auth.feature` |
-| `@catalogo` | `eventos.feature` |
-| `@cotizacion` | `cotizaciones.feature` |
-| `@compra` | `compra.feature` |
-| `@entradas` | `entradas.feature` |
-| `@autorizacion` | `autorizacion.feature` |
-| `@datos` | escenarios data-driven que leen sus casos de `ticketpe/data/*.json` |
-| `@negocio` | 1 escenario en `cotizaciones.feature` que documenta que cotizar no valida cupo |
-| `@ignore` | los 4 helpers en `helpers/` |
+| `@ESC01`..`@ESC08` | a nivel Feature, un feature por escenario de la matriz |
+| `@TC-API-NN` | id del caso en la matriz, a nivel Scenario |
+| `@api` `@p1` `@p2` `@critico` `@alto` `@medio` `@funcional` `@seguridad` `@estado` `@dinero` `@autorizacion` `@regulatorio` `@regresion` | columna *Tags* de la matriz, a nivel Scenario |
+| `@smoke` / `@health` | solo `salud.feature` (gate de ambiente) |
+| `@datos` | escenarios que leen sus casos de `ticketpe/data/*.json` |
+| `@framework` | `framework/utils.feature`, la verificación del propio framework |
+| `@ignore` | los helpers en `helpers/` |
+| `@RIESGO-*` | severidad más alta del ESC, a nivel Feature |
+| `@REQ-HU-*` | historia de usuario, a nivel Scenario |
 
-`salud.feature` se selecciona con `@smoke` (a nivel Feature) o con `@health`,
-que aísla solo el health check.
+`@RIESGO-*` y `@REQ-*` alimentan la matriz de trazabilidad
+(`scripts/resumen-corrida.sh`): [`TAE.md`](TAE.md#3-trazabilidad-riesgo--requisito--escenario).
+
+## Hallazgos
+
+Escenarios en rojo contra `prod` (2026-09-16). La aserción es la de la matriz:
+no se ajusta para que pase.
+
+| Caso | Esperado (matriz) | API real |
+|---|---|---|
+| CP05 | cotización con `moneda: PEN` | no devuelve moneda (el desglose sí cuadra al céntimo, incluido el borde half-up) |
+| CP07 | 2.º cupón ⇒ `409 cupon_ya_aplicado`; se cobra el primero | `200`: el segundo reemplaza al primero |
+| CP08 | entradas emitidas = unidades de la reserva | emite `cantidad + 1` |
+| CP09 | tarjeta aprobada ⇒ N entradas | emite `N + 1` |
+| CP13 | QR con ≥ 128 bits | `QR-` + 24 hex = 96 bits |
+| CP17 | cedente reintenta ⇒ `409 ya_transferida` | `403 no_autorizado` |
+| CP18 | con reembolso en trámite ⇒ `409` | `200`, transfiere igual |
+| CP19 | evento ya iniciado ⇒ `409 evento_finalizado` | `200`, transfiere igual (consume una entrada sembrada de la cuenta demo) |
+| CP22 | QR anterior a la transferencia ⇒ `409 entrada_transferida` | `200`, el QR viejo sigue entrando |
+| CP23 | 2.º check-in indica el instante del primero | `409 ya_usada` sin timestamp |
+
+Además, fuera de aserción: el `403` de `GET /entradas/{id}` a un tercero devuelve
+en `mensaje` el nombre y correo del dueño (Ley 29733).
 
 ## Abrir en IntelliJ IDEA
 
@@ -160,8 +190,22 @@ llevan tipos reales (números, `null`) y admiten matchers de Karate como
 | Cron 07:00 Lima | suite completa |
 | `workflow_dispatch` | tags y `environment` a elección |
 
-Cada corrida sube el reporte HTML como artifact y escribe un resumen por feature
-en el Job Summary. El build falla si falla un escenario.
+Antes de la suite corren dos gates fail-fast, cada uno con su propio nombre de
+step para que el veredicto se lea sin abrir el log:
+
+| Step | Qué verifica | Si falla |
+|---|---|---|
+| Verificar el framework (TAS) | `FrameworkTest`, sin red | la suite está rota, no el producto |
+| Gate de salud del ambiente | `salud.feature` con `--tags @health` | el ambiente está caído, no es una regresión |
+
+El paso de la suite corre igual los dos runners: los gates son fail-fast, no
+reemplazan el alcance de la corrida.
+
+Cada corrida sube el reporte HTML como artifact y escribe el Job Summary con
+`scripts/resumen-corrida.sh`: veredicto, **los casos en rojo ordenados por
+severidad, con su `feature:línea` y el primer fallo**, y la cobertura por
+severidad, ESC, riesgo y requisito. El
+build falla si falla un escenario.
 
 Fuera de los PR, el reporte se despliega además a **GitHub Pages**, así que la
 última corrida siempre queda en una URL fija (`https://<usuario>.github.io/<repo>/`).
@@ -180,6 +224,7 @@ Pages necesita ese nombre.
 |---|---|
 | [`ARCHITECTURE.md`](ARCHITECTURE.md) | cómo está armada la suite y por qué |
 | [`STRATEGY.md`](STRATEGY.md) | qué se automatiza y con qué criterio |
+| [`TAE.md`](TAE.md) | decisiones de ingeniería de automatización (gTAA, TAS vs SUT, trazabilidad, métricas) |
 | [`AGENTS.md`](AGENTS.md) | reglas para agentes de codificación |
 
 ## Contrato descubierto (no está en el OpenAPI publicado)
@@ -195,4 +240,4 @@ Pages necesita ese nombre.
 | `POST /entradas/{id}/reembolso` | `{ motivo }` -> 201 |
 | `POST /entradas/{id}/transferir` | `{ correo_destino }` -> 200 |
 
-Tarjetas: `4242424242424242` aprueba, `4000000000000002` rechaza (402).
+Tarjetas: `4242424242424242` aprueba, `4000000000000002` rechaza (402), cualquier otra ⇒ `400 tarjeta_no_reconocida`.

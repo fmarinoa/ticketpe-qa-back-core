@@ -3,7 +3,7 @@ Feature: compra una entrada y devuelve sus datos (helper reutilizable)
 
 Scenario: comprar
   * def cantidad = karate.get('cantidad', 1)
-  * def elegido = call read('classpath:ticketpe/helpers/evento-vendible.feature') { cantidad: '#(cantidad)' }
+  * def elegido = call read('classpath:ticketpe/helpers/evento-vendible.feature') { cantidad: '#(cantidad)', soloEvento: '#(karate.get("soloEvento", null))', excluirEvento: '#(karate.get("excluirEvento", null))' }
   Given url baseUrl
   And configure headers = auth.bearer(token)
   And path 'reservas'

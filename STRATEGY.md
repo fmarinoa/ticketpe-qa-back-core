@@ -5,19 +5,20 @@
 No se automatiza todo el API: se automatizan los flujos donde una falla cuesta
 plata o confianza. Criterio = impacto en el negocio x probabilidad de regresión.
 
-| Flujo | Impacto si falla | Cobertura | Feature |
-|---|---|---|---|
-| Reserva -> pago -> emisión de entradas | Crítico: se cobra y no se emite, o se emite sin cobrar | E2E + negativos | `compra.feature` |
-| Cálculo de precios (subtotal, IGV, total) | Crítico: cobro incorrecto | Cálculo verificado contra el precio del catálogo | `cotizaciones.feature` |
-| Control de cupo (`sin_cupo`) | Alto: sobreventa | Negativo | `compra.feature` |
-| Autenticación y propiedad del dato | Alto: ver o mover entradas ajenas | 401 / 403 | `auth.feature`, `autorizacion.feature`, `entradas.feature` |
-| Transferencia y reembolso | Medio: soporte manual | Happy path + reglas (una sola transferencia) | `entradas.feature` |
-| Catálogo y disponibilidad | Medio: lectura, degradación visible | Contrato + coherencia de cupos | `eventos.feature` |
-| Salud del servicio | Bajo, pero es el canario del pipeline | Smoke | `salud.feature` |
+La fuente de casos es la matriz de diseño `testathon2026/diseno-pruebas/API.tsv`
+(R3): cada ESC es un feature y cada CP automatizable un escenario.
 
-Fuera de alcance consciente: `POST /soporte` (contrato no deducible) y los happy
-paths de `checkin` y `reportes/ventas` (requieren un rol que el registro público
-no entrega). De esos dos solo se cubren 401/403.
+| ESC | Riesgo | Casos | Feature |
+|---|---|---|---|
+| ESC01 Control de acceso | Crítico: autorización | CP01-CP03 | `esc01-control-acceso.feature` |
+| ESC02 Precio y cupones | Alto: dinero | CP05-CP07 | `esc02-precio-cupones.feature` |
+| ESC03 Cobro | Crítico: cobro duplicado | CP08-CP09 | `esc03-cobro-reserva.feature` |
+| ESC04 Cupo | Alto: sobreventa | CP11 | `esc04-cupo-reserva.feature` |
+| ESC05 Fuga de datos | Crítico: regulatorio | CP13-CP14 | `esc05-fuga-datos.feature` |
+| ESC06 Transferencia | Crítico: doble cesión | CP16-CP19 | `esc06-transferencia-estado-invalido.feature` |
+| ESC07 Reembolso | Alto: doble devolución | CP20-CP21 | `esc07-reembolso.feature` |
+| ESC08 Check-in | Crítico: acceso duplicado | CP22-CP23 | `esc08-checkin.feature` |
+| Salud del servicio | Bajo, canario del pipeline | — | `salud.feature` |
 
 ## 2. Principios de diseño de la suite
 
@@ -34,17 +35,15 @@ no entrega). De esos dos solo se cubren 401/403.
    (`'#uuid'`, `'#number'`, `'#regex'`), no únicamente el 200.
 5. **Data-driven donde la lógica es la misma y solo cambia el dato.** Las
    variantes viven en JSON (`ticketpe/data/`), no en Gherkin duplicado.
-6. **El bug se documenta, no se esconde.** Comportamientos discutibles del API
-   se cubren con un escenario etiquetado `@negocio` que fija el comportamiento
-   actual (ejemplo: cotizar 99 999 entradas responde 200 sin validar cupo).
+6. **El bug se documenta, no se esconde.** El escenario asserta lo que dice la
+   matriz y queda en rojo; el desvío va a la tabla de Hallazgos del README.
 
 ## 3. Convenciones
 
 - Nombres de escenario en español, describiendo la regla de negocio, no el
   endpoint: "no se puede reservar más entradas de las disponibles".
-- Un tag por dominio (`@auth`, `@compra`, ...) + `@smoke` en el happy path de
-  cada dominio + `@datos` en los data-driven + `@negocio` en los que documentan
-  comportamiento cuestionable.
+- Un feature por ESC (`@ESCNN`), un escenario por CP (`@TC-API-NN`) con los tags
+  de la matriz + `@datos` en los data-driven.
 - Helpers siempre `@ignore` para que no corran sueltos.
 - Nada de `sleep`. Si el API fuera eventualmente consistente, se usa
   `retry until` de Karate.

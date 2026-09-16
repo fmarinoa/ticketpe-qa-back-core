@@ -49,26 +49,27 @@ jobs:
             echo "tags=" >> "$GITHUB_OUTPUT"
           fi
 
+      - name: Verificar el framework (TAS)
+        run: |
+          mvn -B test -Dci=true -Dtest=FrameworkTest \
+            -Dkarate.env="${{ inputs.environment || 'prod' }}" \
+            || { echo "::error title=Framework roto::Fallo la verificacion del TAS. La suite no corre: el defecto esta en la automatizacion, no en el producto."; exit 1; }
+
+      - name: Gate de salud del ambiente
+        run: |
+          mvn -B test -Dci=true -Dtest=RunnerTest \
+            -Dkarate.env="${{ inputs.environment || 'prod' }}" "-Dkarate.options=--tags @health" \
+            || { echo "::error title=Ambiente caido::El health check no pasa. La suite no corre: esto es un fallo de ambiente, no una regresion."; exit 1; }
+
       - name: Ejecutar suite
         run: |
           OPTS=""
           [ -n "${{ steps.alcance.outputs.tags }}" ] && OPTS="--tags ${{ steps.alcance.outputs.tags }}"
-          mvn -B clean test -Dci=true -Dkarate.env="${{ inputs.environment || 'prod' }}" "-Dkarate.options=$OPTS"
+          mvn -B clean test -Dci=true -Dtest=RunnerTest -Dkarate.env="${{ inputs.environment || 'prod' }}" "-Dkarate.options=$OPTS"
 
       - name: Resumen en el job
         if: always()
-        run: |
-          RESUMEN=target/karate-reports/karate-summary-json.txt
-          [ -f "$RESUMEN" ] || exit 0
-          {
-            echo "## Resultado Karate"
-            echo ""
-            echo "| Feature | Escenarios | Fallidos |"
-            echo "|---|---|---|"
-            jq -r '.featureSummary[] | "| \(.relativePath) | \(.scenarioCount) | \(.failedCount) |"' "$RESUMEN"
-            echo ""
-            echo "Escenarios fallidos: **$(jq -r '.scenariosfailed' "$RESUMEN")**"
-          } >> "$GITHUB_STEP_SUMMARY"
+        run: scripts/resumen-corrida.sh >> "$GITHUB_STEP_SUMMARY"
 
       - name: Analizar fallo con IA
         if: failure() && github.event.pull_request.head.repo.fork != true
