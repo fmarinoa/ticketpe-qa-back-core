@@ -87,6 +87,18 @@ jobs:
           path: target/karate-reports
           retention-days: 14
 
+      # endpoint de shields.io: el repo es privado y el badge nativo no se ve sin acceso; Pages sí es público
+      - name: Badge del pipeline
+        if: always() && github.event_name != 'pull_request'
+        run: |
+          mkdir -p target/karate-reports
+          cat target/karate-reports/karate-json/karate-events.jsonl 2>/dev/null \
+            | jq -cs --arg status "${{ job.status }}" 'map(select(.type == "SUITE_EXIT"))[0].data.summary // {}
+              | {schemaVersion: 1, label: "E2E API",
+                 message: (if $status == "success" then "\(.scenariosPassed)/\(.scenarioCount) verdes" else "fallando" end),
+                 color: (if $status == "success" then "brightgreen" else "red" end)}' \
+            > target/karate-reports/badge.json
+
       - name: Empaquetar para Pages
         if: always() && github.event_name != 'pull_request'
         uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0

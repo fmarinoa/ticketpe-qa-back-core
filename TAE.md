@@ -35,7 +35,7 @@ mapeo real de este repo:
 
 | Capa gTAA | Aquí | Estado |
 |---|---|---|
-| **Test Generation** | `ticketpe/data/*.json` leídos por `Examples:` | parcial — los casos se escriben a mano, no se derivan de un modelo |
+| **Test Generation** | `Examples:` de los Scenario Outline | parcial — los casos se escriben a mano, no se derivan de un modelo |
 | **Test Definition** | `ticketpe/*.feature` | completa |
 | **Test Adaptation** | `helpers/*.feature` (HTTP), `karate-base.js` (genérico), `karate-config.js` (dominio) | completa |
 | **Test Execution** | `RunnerTest.java`, `FrameworkTest.java`, `.github/workflows/e2e.yml` | completa |
@@ -48,12 +48,12 @@ criterio de reparto y el árbol de decisión están en
 
 **Hueco consciente en Test Generation.** No hay MBT ni generación desde el
 OpenAPI, porque el contrato real no está publicado (ver la tabla de endpoints en
-[`AGENTS.md`](AGENTS.md)). Los data-driven de `ticketpe/data/` son el sustituto
+[`AGENTS.md`](AGENTS.md)). Los `Examples:` de los Outline son el sustituto
 barato: agregar un caso es un objeto JSON, no Gherkin nuevo.
 
 ## 3. Trazabilidad: riesgo → requisito → escenario
 
-Un contador de "46 escenarios verdes" no responde la única pregunta que importa
+Un contador de "21 escenarios verdes" no responde la única pregunta que importa
 antes de un release: **¿qué riesgo de negocio quedó cubierto?**
 
 Dos tags lo resuelven, y el reporte de Karate ya los transporta:
@@ -124,7 +124,7 @@ SUT no lo hace todavía, el costo del lado del test ya está pagado (2 líneas).
 
 ## 5. Clasificación de fallos: ambiente ≠ regresión
 
-El error más caro de una suite E2E no es el falso negativo: es **48 rojos porque
+El error más caro de una suite E2E no es el falso negativo: es **todo en rojo porque
 el ambiente estaba caído** y media hora de triage para descubrirlo.
 
 El pipeline pregunta en orden **de lo barato a lo caro, y de adentro hacia
@@ -133,7 +133,7 @@ lista de steps sin abrir un log:
 
 1. **Verificación del TAS** (`e2e.yml`, primer step de test). `FrameworkTest`
    solo: sin red, ~1 s. Si la suite está rota no tiene sentido interrogar al
-   SUT — los 48 escenarios siguientes producirían triage falso.
+   SUT — los escenarios siguientes producirían triage falso.
 2. **Gate de salud** (`e2e.yml`, antes de la suite). Corre `salud.feature` sola:
    `-Dtest=RunnerTest "-Dkarate.options=--tags @health"`. Si el ambiente no
    responde sano, la suite **no corre** y el job falla con
@@ -150,7 +150,7 @@ lista de steps sin abrir un log:
    runners de la JVM, y `FrameworkTest` no tiene escenarios `@health`.
 3. **Corte de configuración** (`karate-config.js`, dentro de cualquiera de los
    dos anteriores). Un `karate.env` sin `baseUrl` corta con
-   `ambiente desconocido: <env>` en vez de 48 `UnknownHostException`.
+   `ambiente desconocido: <env>` en vez de un `UnknownHostException` por escenario.
 4. **Triage asistido** (`scripts/analizar-fallo.sh`, solo si falla la suite).
    Junta commit, ambiente, escenarios fallidos, tags y el paso exacto que
    rompió, y lo manda a analizar.

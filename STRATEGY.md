@@ -31,9 +31,11 @@ La fuente de casos es la matriz de diseño `testathon2026/R3-diseno-pruebas/tsv/
 4. **Aserciones de contrato, no solo de status.** Se valida forma y tipos
    (`'#uuid'`, `'#number'`, `'#regex'`), no únicamente el 200.
 5. **Data-driven donde la lógica es la misma y solo cambia el dato.** Las
-   variantes viven en JSON (`ticketpe/data/`), no en Gherkin duplicado.
+   variantes van en `Examples:` (o en JSON bajo `ticketpe/data/` si crecen),
+   no en Gherkin duplicado.
 6. **El bug se documenta, no se esconde.** El escenario asserta lo que dice la
-   matriz y queda en rojo; el desvío va a la tabla de Hallazgos del README.
+   matriz y queda en rojo; el defecto se reporta en
+   `testathon2026/R4-ejecucion-reporte-defectos/defectos.md`.
 
 ## 3. Convenciones
 
@@ -54,7 +56,7 @@ La fuente de casos es la matriz de diseño `testathon2026/R3-diseno-pruebas/tsv/
 | Pull request | `@smoke` | feedback en menos de 1 min |
 | Push a `main` | suite completa | guardián de la rama |
 | Cron diario 07:00 Lima | suite completa | detecta degradación del ambiente, no solo del código |
-| `workflow_dispatch` | tags, ambiente y `baseUrl` a elección | corridas ad hoc en el testathon |
+| `workflow_dispatch` | tags y ambiente a elección | corridas ad hoc en el testathon |
 
 Cada corrida publica el reporte HTML de Karate como artifact, un resumen por
 feature en el Job Summary y, fuera de los PR, despliega ese mismo reporte a

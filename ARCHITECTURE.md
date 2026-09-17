@@ -56,7 +56,7 @@ ambiente es una clave en cada uno.
 No existe forma de pasar una URL suelta por CLI: **toda URL contra la que se
 corre está en el repo y pasó por un PR**. Un ambiente sin `baseUrl` corta la
 corrida con `ambiente desconocido: <env>` antes del primer request, en vez de
-fallar 46 escenarios con `UnknownHostException`.
+fallar todos los escenarios con `UnknownHostException`.
 
 Las tarjetas hoy son iguales en los tres ambientes; están separadas para que uno
 cambie de pasarela sin tocar un feature. Los escenarios leen

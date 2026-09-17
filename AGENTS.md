@@ -102,7 +102,8 @@ el `pom.xml`.**
 - **`callonce` cachea por el texto de la línea**: dos `callonce` idénticos en un
   feature devuelven la misma entidad. Para dos usuarios distintos, `call`.
 - **Un bug del API se documenta, no se esconde**: el escenario queda en rojo con
-  la aserción de la matriz, más una fila en la tabla de Hallazgos del README.
+  la aserción de la matriz, y el defecto se reporta en
+  `testathon2026/R4-ejecucion-reporte-defectos/defectos.md`.
 
 ## CI
 
@@ -116,6 +117,24 @@ ya genera `index.html`). El build falla si falla un escenario
 
 Los `uses:` están **fijados por hash de commit** con el tag en comentario. Al
 actualizar una action hay que cambiar el hash, no el tag.
+
+## Sincronización con testathon2026
+
+Este repo es la **fuente de verdad**. Se publica como `git subtree` en
+`testathon2026` (rama `testitans`), en `R5-automatizacion/TicketPe-Testing-API/`.
+Flujo en un solo sentido: commit y push acá, después pull en `testathon2026`.
+
+```sh
+cd ../testathon2026                                                     # rama testitans
+git subtree pull --prefix=R5-automatizacion/TicketPe-Testing-API back-core main --squash
+git push origin testitans
+```
+
+- El remoto `back-core` apunta a `git@github.com:fmarinoa/ticketpe-qa-back-core.git`.
+  En un clon nuevo: `git remote add back-core <url>`.
+- **No editar la copia en `testathon2026`**: los cambios van acá, si no el
+  `subtree pull` entra en conflicto.
+- Ahí el workflow de CI no corre (GitHub solo lee `.github/` en la raíz).
 
 ## Contrato del API (no está en el OpenAPI publicado)
 
