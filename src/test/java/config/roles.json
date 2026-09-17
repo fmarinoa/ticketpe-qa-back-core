@@ -8,10 +8,6 @@
     "admin": {
       "email": "admin@ticketpe.demo",
       "password": "admin123"
-    },
-    "attendee": {
-      "email": "asistente02@ticketpe.demo",
-      "password": "asistente123"
     }
   },
   "stag": {
@@ -23,10 +19,6 @@
     "admin": {
       "email": "admin@ticketpe.demo",
       "password": "admin123"
-    },
-    "attendee": {
-      "email": "asistente02@ticketpe.demo",
-      "password": "asistente123"
     }
   },
   "local": {
@@ -38,10 +30,6 @@
     "admin": {
       "email": "admin@ticketpe.demo",
       "password": "admin123"
-    },
-    "attendee": {
-      "email": "asistente02@ticketpe.demo",
-      "password": "asistente123"
     }
   }
 }

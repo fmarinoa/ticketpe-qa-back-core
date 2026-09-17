@@ -16,10 +16,10 @@ No hay código de producción: todo el repo es test. `src/main` no existe.
 mvn test -Dkarate.env=prod                                              # suite completa (5 hilos)
 mvn test -Dkarate.env=stag                                              # otro ambiente
 mvn test -Dkarate.env=prod "-Dkarate.options=--tags @smoke"             # por tag
-mvn test -Dkarate.env=prod "-Dkarate.options=--tags @ESC03,@ESC06"      # varios tags (OR)
+mvn test -Dkarate.env=prod "-Dkarate.options=--tags @ESC03,@ESC04"      # varios tags (OR)
 mvn test -Dkarate.env=prod "-Dkarate.options=--tags ~@critico"          # excluir
-mvn test -Dkarate.env=prod "-Dkarate.options=classpath:ticketpe/esc03-cobro-reserva.feature"     # un feature
-mvn test -Dkarate.env=prod "-Dkarate.options=classpath:ticketpe/esc03-cobro-reserva.feature:11"  # un escenario (por línea)
+mvn test -Dkarate.env=prod "-Dkarate.options=classpath:ticketpe/esc02-dinero.feature"            # un feature
+mvn test -Dkarate.env=prod "-Dkarate.options=classpath:ticketpe/esc02-dinero.feature:9"         # un escenario (por línea)
 mvn test -Dkarate.env=prod -Dci=true                                    # modo CI (log compacto)
 mvn test -Dkarate.env=prod -Dtest=RunnerTest "-Dkarate.options=--tags @health"   # gate de salud del ambiente
 mvn test -Dkarate.env=prod -Dtest=FrameworkTest                          # solo los tests del framework (TAS)
@@ -67,11 +67,11 @@ el `pom.xml`.**
   loguear a ese usuario se usa `alta.password`, nunca `ticketpe.password`. Si la
   credencial fuera global, un `callonce` la desincronizaría
   (ver [`ARCHITECTURE.md`](ARCHITECTURE.md#credenciales)).
-- **Fuente única de casos: la matriz de diseño `testathon2026/diseno-pruebas/API.tsv`.**
+- **Fuente única de casos: la matriz de diseño `testathon2026/R3-diseno-pruebas/tsv/API.tsv`.**
   Un feature por escenario de la matriz (`escNN-*.feature`, tag `@ESCNN`), un
   Scenario por caso (`CPNN - ...`). No se agregan casos que no estén en la matriz.
   Los tags del Scenario son los de la columna *Tags* de la matriz
-  más `@TC-API-NN` y `@datos` si es data-driven. `salud.feature` es la única
+  más `@REQ-HU-*` y `@datos` si es data-driven. `salud.feature` es la única
   excepción: es el gate de ambiente del CI (`@smoke` a nivel Feature, `@health`
   en su escenario).
 - **Oráculo**: status e invariantes (dueño, estado, monto, cantidad de entradas)
@@ -132,8 +132,10 @@ actualizar una action hay que cambiar el hash, no el tag.
 
 Datos de prueba fijos (`config/roles.json`): el organizador de pruebas es dueño
 del evento `evento_id` (check-in, reportes y `POST /cupones` solo sobre ese
-evento); `attendee` es una cuenta demo con entradas de eventos ya iniciados
-(CP19, CP21), porque no hay API para crear eventos ni mover el reloj.
+evento).
+
+Las condiciones sin oráculo o no controlables (NC-01..NC-18 en
+`R3-diseno-pruebas/casos-prueba.md` §6) no se automatizan.
 
 Los rojos de la suite son hallazgos del API (tabla en el README), **no del test**.
 No "arreglarlos" ajustando la aserción.

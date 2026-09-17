@@ -1,5 +1,0 @@
-[
-  { "caso": "rechazada",     "card": "declined", "status": 402, "error": "pago_rechazado",        "entradas": 0, "estadoReserva": "pendiente" },
-  { "caso": "aprobada",      "card": "approved", "status": 201, "error": null,                    "entradas": 2, "estadoReserva": "#string" },
-  { "caso": "no reconocida", "card": "unknown",  "status": 400, "error": "tarjeta_no_reconocida", "entradas": 0, "estadoReserva": "pendiente" }
-]

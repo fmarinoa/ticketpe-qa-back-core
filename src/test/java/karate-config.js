@@ -20,10 +20,9 @@ function fn() {
 
   karate.configure('headers', { 'X-Request-Id': traceId });
 
-  karate.configure('logging', {
-    pretty: !isCi,
-    mask: { headers: ['Authorization'], jsonPaths: ['$..password', '$..token'] }
-  });
+  var logging = { pretty: !isCi };
+  if (isCi) logging.mask = { headers: ['Authorization'], jsonPaths: ['$..password', '$..token'] };
+  karate.configure('logging', logging);
 
   return {
     env: env,

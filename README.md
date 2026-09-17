@@ -3,9 +3,9 @@
 Pruebas E2E de backend para la API **TicketPe Núcleo**
 (`https://testathon.testingperu.com/api/core`) con [Karate](https://docs.karatelabs.io/) 2.1.2 sobre Maven + JUnit 6.
 
-> **Estado al 2026-09-16:** suite reestructurada a los 19 casos automatizables de
-> la matriz `diseno-pruebas/API.tsv` (45 escenarios con los Examples). Contra
-> `prod`: 34 verdes, 11 rojos. Los rojos son hallazgos reales del API, no tests
+> **Estado al 2026-09-16:** suite reestructurada a 17 casos de
+> `testathon2026/R3-diseno-pruebas/tsv/API.tsv` (20 escenarios con los Examples; CP11 y CP12 retirados). Contra
+> `prod`: 16 casos verdes, 1 rojo. Los rojos son hallazgos reales del API, no tests
 > mal escritos (ver "Hallazgos").
 
 ## Requisitos
@@ -20,9 +20,9 @@ mvn test -Dkarate.env=prod                                # toda la suite (5 hil
 mvn test -Dkarate.env=stag                                # contra staging
 mvn test -Dkarate.env=local                               # contra localhost:4100
 mvn test -Dkarate.env=prod "-Dkarate.options=--tags @smoke"             # solo el smoke
-mvn test -Dkarate.env=prod "-Dkarate.options=--tags @ESC03,@ESC06"      # varios tags (OR)
+mvn test -Dkarate.env=prod "-Dkarate.options=--tags @ESC03,@ESC04"      # varios tags (OR)
 mvn test -Dkarate.env=prod "-Dkarate.options=--tags ~@critico"          # excluir un tag
-mvn test -Dkarate.env=prod "-Dkarate.options=classpath:ticketpe/esc03-cobro-reserva.feature"
+mvn test -Dkarate.env=prod "-Dkarate.options=classpath:ticketpe/esc02-dinero.feature"
 ```
 
 ## Ambientes
@@ -88,27 +88,20 @@ src/test/java/
   ticketpe/
     runners/RunnerTest.java           runner JUnit (Runner.path("classpath:ticketpe").parallel(5))
     salud.feature                           gate de ambiente del CI
-    esc01-control-acceso.feature            CP01-CP03  rol x endpoint, entrada ajena, escalada en registro
-    esc02-precio-cupones.feature            CP05-CP07  desglose al céntimo, cupón inválido, cupones apilados
-    esc03-cobro-reserva.feature             CP08-CP09  doble pago, resultado por tarjeta
-    esc04-cupo-reserva.feature              CP11       tope de 4 por evento
-    esc05-fuga-datos.feature                CP13-CP14  QR adivinable, datos en el reporte
-    esc06-transferencia-estado-invalido.feature  CP16-CP19  usada, transferida, reembolso, evento iniciado
-    esc07-reembolso.feature                 CP20-CP21  doble reembolso, evento iniciado
-    esc08-checkin.feature                   CP22-CP23  QR anterior, doble check-in
-    data/
-      cotizacion-desglose.json              CP05: precio, cupón y desglose esperado
-      tarjetas.json                         CP09: tarjeta y resultado esperado
+    esc01-cuentas-rol-propiedad.feature     CP01-CP05  token de registro, rol por token, token alterado, IDOR, organizador ajeno
+    esc02-dinero.feature                    CP06-CP10  descuento antes del IGV, cupón inválido, alta de cupón, reintento de pago, pago simultáneo
+    esc03-inventario.feature                CP13       tope de 4
+    esc04-ciclo-vida-entrada.feature        CP14-CP17  transferencia única, destinos inválidos, doble reembolso, doble check-in
+    esc05-datos-texto-libre.feature         CP18-CP19  datos personales en el reporte, texto libre malicioso
     helpers/
       usuario.feature                 registra un asistente nuevo y devuelve token
       login.feature                   login de un rol fijo (config/roles.json)
       evento-vendible.feature         elige evento futuro, pagado y con cupo (soloEvento / excluirEvento)
       disponibilidad.feature          consulta /eventos/{id}/disponibilidad
       entrada-comprada.feature        reserva + pago y devuelve la entrada emitida
-      cupon.feature                   el organizador crea un cupón porcentual para su evento
+      cupon.feature                   el administrador crea un cupón porcentual (evento_id opcional)
       cupon-agotado.feature           cupón de un uso ya consumido
-      pago-paralelo.feature           dos pagos simultáneos con la misma Idempotency-Key
-      entrada-evento-iniciado.feature entrada vigente de un evento ya iniciado (cuenta demo)
+      post-paralelo.feature           el mismo POST en paralelo, un request por token
 ```
 
 Los helpers están marcados `@ignore` (no corren solos) y evitan datos quemados:
@@ -126,9 +119,9 @@ Karate obligan a ese corte: [`ARCHITECTURE.md`](ARCHITECTURE.md).
 
 | Tag | Dónde |
 |---|---|
-| `@ESC01`..`@ESC08` | a nivel Feature, un feature por escenario de la matriz |
+| `@ESC01`..`@ESC05` | a nivel Scenario, un feature por escenario de la matriz |
 | `@TC-API-NN` | id del caso en la matriz, a nivel Scenario |
-| `@api` `@p1` `@p2` `@critico` `@alto` `@medio` `@funcional` `@seguridad` `@estado` `@dinero` `@autorizacion` `@regulatorio` `@regresion` | columna *Tags* de la matriz, a nivel Scenario |
+| `@api` `@p1` `@p2` `@critico` `@alto` `@RSK-NN` | columna *Tags* de la matriz, a nivel Scenario |
 | `@smoke` / `@health` | solo `salud.feature` (gate de ambiente) |
 | `@datos` | escenarios que leen sus casos de `ticketpe/data/*.json` |
 | `@framework` | `framework/utils.feature`, la verificación del propio framework |
@@ -146,19 +139,8 @@ no se ajusta para que pase.
 
 | Caso | Esperado (matriz) | API real |
 |---|---|---|
-| CP05 | cotización con `moneda: PEN` | no devuelve moneda (el desglose sí cuadra al céntimo, incluido el borde half-up) |
-| CP07 | 2.º cupón ⇒ `409 cupon_ya_aplicado`; se cobra el primero | `200`: el segundo reemplaza al primero |
-| CP08 | entradas emitidas = unidades de la reserva | emite `cantidad + 1` |
-| CP09 | tarjeta aprobada ⇒ N entradas | emite `N + 1` |
-| CP13 | QR con ≥ 128 bits | `QR-` + 24 hex = 96 bits |
-| CP17 | cedente reintenta ⇒ `409 ya_transferida` | `403 no_autorizado` |
-| CP18 | con reembolso en trámite ⇒ `409` | `200`, transfiere igual |
-| CP19 | evento ya iniciado ⇒ `409 evento_finalizado` | `200`, transfiere igual (consume una entrada sembrada de la cuenta demo) |
-| CP22 | QR anterior a la transferencia ⇒ `409 entrada_transferida` | `200`, el QR viejo sigue entrando |
-| CP23 | 2.º check-in indica el instante del primero | `409 ya_usada` sin timestamp |
+| CP16 | `GET /entradas/{id}` muestra `reembolso_estado: "solicitado"` | el campo no existe en el detalle (sí en `GET /mis-entradas`) |
 
-Además, fuera de aserción: el `403` de `GET /entradas/{id}` a un tercero devuelve
-en `mensaje` el nombre y correo del dueño (Ley 29733).
 
 ## Abrir en IntelliJ IDEA
 
@@ -167,18 +149,6 @@ en `mensaje` el nombre y correo del dueño (Ley 29733).
 3. Plugins recomendados: **Cucumber for Java** y **Gherkin** (dan sintaxis, navegación y ejecución de escenarios sueltos desde el gutter).
 4. `src/test/java` es a la vez fuente de tests y test resource (los `.feature`, los `.json` y los `.js` se copian al classpath vía la sección `<testResources>` del `pom.xml`).
 
-## Data-driven
-
-Los escenarios `@datos` no llevan los casos en el Gherkin: los leen de JSON.
-
-```gherkin
-Examples:
-  | read('classpath:ticketpe/data/tarjetas.json') |
-```
-
-Agregar un caso = agregar un objeto al JSON, sin tocar el feature. Los JSON
-llevan tipos reales (números, `null`) y admiten matchers de Karate como
-`"#string"` cuando el valor esperado varía.
 
 ## Integración continua
 

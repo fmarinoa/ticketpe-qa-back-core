@@ -18,7 +18,7 @@ Uso y comandos: [`README.md`](README.md) · decisiones estructurales de Karate:
 | Reporte | `target/karate-reports` | `target/karate-reports-framework` |
 
 El TAS **también tiene defectos** y los suyos son peores: se disfrazan de fallo
-del SUT. Si `utils.round` redondeara mal, `esc02-precio-cupones.feature` se
+del SUT. Si `utils.round` redondeara mal, `esc02-dinero.feature` se
 pondría roja y el triage culparía al API. Por eso las funciones de
 `karate-base.js` y `karate-config.js` tienen sus propios escenarios, sin HTTP,
 con runner y reporte separados. Un rojo en `FrameworkTest` significa "la suite
@@ -63,28 +63,32 @@ Dos tags lo resuelven, y el reporte de Karate ya los transporta:
 - `@REQ-{DOMINIO}-{NN}` — a nivel **Scenario**. Identifica la regla de negocio,
   no el endpoint.
 
-Los ids salen de la matriz de diseño (`testathon2026/diseno-pruebas/API.tsv`):
-`@RIESGO-*` es la severidad más alta de los casos del ESC y `@REQ-HU-*` la
-historia de usuario del caso. `@TC-API-NN` conserva el id del caso.
+Los ids salen de la matriz de diseño (`testathon2026/R3-diseno-pruebas/tsv/API.tsv`):
+`@RIESGO-*` es la severidad más alta de los casos del ESC y `@REQ-HU-*` las
+historias de usuario del caso. `@TC-API-NN` y `@RSK-NN` conservan los ids de la matriz.
 
 | Riesgo | Feature |
 |---|---|
-| CRITICO | `esc01-control-acceso`, `esc03-cobro-reserva`, `esc05-fuga-datos`, `esc06-transferencia-estado-invalido`, `esc08-checkin` |
-| ALTO | `esc02-precio-cupones`, `esc04-cupo-reserva`, `esc07-reembolso` |
+| CRITICO | `esc01-cuentas-rol-propiedad`, `esc02-dinero`, `esc05-datos-texto-libre` |
+| ALTO | `esc03-inventario`, `esc04-ciclo-vida-entrada` |
 | BAJO | `salud` |
 
 | Requisito | Casos |
 |---|---|
-| `REQ-HU-E1.2` | CP03 |
-| `REQ-HU-E1.3` | CP01 |
-| `REQ-HU-E3.1` | CP05, CP06 |
-| `REQ-HU-E3.2` | CP11 |
-| `REQ-HU-E3.3` | CP07, CP08, CP09, CP13 |
-| `REQ-HU-E4.1` | CP02 |
-| `REQ-HU-E4.2` | CP16, CP17, CP18, CP19 |
-| `REQ-HU-E4.3` | CP20, CP21 |
-| `REQ-HU-E5.1` | CP22, CP23 |
-| `REQ-HU-E5.2` | CP14 |
+| `REQ-HU-E1.1` | CP01 |
+| `REQ-HU-E1.2` | CP01, CP02 |
+| `REQ-HU-E1.3` | CP02, CP03 |
+| `REQ-HU-E2.1` | CP19 |
+| `REQ-HU-E3.1` | CP06 |
+| `REQ-HU-E3.2` | CP13 |
+| `REQ-HU-E3.3` | CP07, CP09, CP10 |
+| `REQ-HU-E4.1` | CP04, CP14 |
+| `REQ-HU-E4.2` | CP14, CP15 |
+| `REQ-HU-E4.3` | CP16, CP19 |
+| `REQ-HU-E5.1` | CP02, CP05, CP17 |
+| `REQ-HU-E5.2` | CP05, CP18 |
+| `REQ-HU-E6.1` | CP19 |
+| `REQ-HU-E8.1` | CP02, CP05, CP06, CP07, CP08 |
 | `REQ-SAL-01` | salud del servicio |
 
 `scripts/resumen-corrida.sh` reconstruye esta matriz **desde la corrida**, no

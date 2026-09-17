@@ -5,19 +5,16 @@
 No se automatiza todo el API: se automatizan los flujos donde una falla cuesta
 plata o confianza. Criterio = impacto en el negocio x probabilidad de regresión.
 
-La fuente de casos es la matriz de diseño `testathon2026/diseno-pruebas/API.tsv`
-(R3): cada ESC es un feature y cada CP automatizable un escenario.
+La fuente de casos es la matriz de diseño `testathon2026/R3-diseno-pruebas/tsv/API.tsv`
+(R3, espejo de `casos-prueba.md` §1): cada ESC es un feature y cada caso un escenario.
 
 | ESC | Riesgo | Casos | Feature |
 |---|---|---|---|
-| ESC01 Control de acceso | Crítico: autorización | CP01-CP03 | `esc01-control-acceso.feature` |
-| ESC02 Precio y cupones | Alto: dinero | CP05-CP07 | `esc02-precio-cupones.feature` |
-| ESC03 Cobro | Crítico: cobro duplicado | CP08-CP09 | `esc03-cobro-reserva.feature` |
-| ESC04 Cupo | Alto: sobreventa | CP11 | `esc04-cupo-reserva.feature` |
-| ESC05 Fuga de datos | Crítico: regulatorio | CP13-CP14 | `esc05-fuga-datos.feature` |
-| ESC06 Transferencia | Crítico: doble cesión | CP16-CP19 | `esc06-transferencia-estado-invalido.feature` |
-| ESC07 Reembolso | Alto: doble devolución | CP20-CP21 | `esc07-reembolso.feature` |
-| ESC08 Check-in | Crítico: acceso duplicado | CP22-CP23 | `esc08-checkin.feature` |
+| ESC01 Cuentas, rol y propiedad | Crítico: escalamiento, IDOR | CP01-CP05 | `esc01-cuentas-rol-propiedad.feature` |
+| ESC02 Dinero: cotización, cupones y pago | Crítico: doble cobro | CP06-CP10 | `esc02-dinero.feature` |
+| ESC03 Inventario: concurrencia, expiración y tope | Alto: tope de 4 evadible | CP13 | `esc03-inventario.feature` |
+| ESC04 Ciclo de vida de la entrada | Alto: transferencia, reembolso, check-in | CP14-CP17 | `esc04-ciclo-vida-entrada.feature` |
+| ESC05 Datos personales y texto libre | Crítico: regulatorio | CP18-CP19 | `esc05-datos-texto-libre.feature` |
 | Salud del servicio | Bajo, canario del pipeline | — | `salud.feature` |
 
 ## 2. Principios de diseño de la suite
